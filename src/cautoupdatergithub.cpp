@@ -1,10 +1,12 @@
 #include "cautoupdatergithub.h"
 
+#include <QCoreApplication>
 #include <QDebug>
+#include <QDir>
+#include <QFile>
 #include <QNetworkRequest>
 #include <QNetworkReply>
-#include <QTextBlock>
-#include <QTextDocument>
+#include <QProcess>
 
 #include <assert.h>
 #include <utility>
@@ -27,14 +29,28 @@ void CAutoUpdaterGithub::setUpdateStatusListener(UpdateStatusListener* listener)
 void CAutoUpdaterGithub::checkForUpdates()
 {
 	QNetworkReply * reply = _networkManager.get(QNetworkRequest(QUrl(_updatePageAddress)));
-	assert(reply);
+	if (!reply)
+	{
+		if (_listener)
+			_listener->onUpdateErrorCallback("Network request rejected.");
+		return;
+	}
 
 	connect(&_networkManager, &QNetworkAccessManager::finished, this, &CAutoUpdaterGithub::updateCheckRequestFinished, Qt::UniqueConnection);
 }
 
 void CAutoUpdaterGithub::downloadAndInstallUpdate()
 {
+	QNetworkReply * reply = _networkManager.get(QNetworkRequest(QUrl(_updateDownloadLink)));
+	if (!reply)
+	{
+		if (_listener)
+			_listener->onUpdateErrorCallback("Network request rejected.");
+		return;
+	}
 
+	connect(reply, &QNetworkReply::downloadProgress, this, &CAutoUpdaterGithub::onDownloadProgress);
+	connect(&_networkManager, &QNetworkAccessManager::finished, this, &CAutoUpdaterGithub::updateDownloadFinished, Qt::UniqueConnection);
 }
 
 inline std::pair<QString /*result*/, int /*end pos*/> match(const QString& pattern, const QString& text, int from)
@@ -63,11 +79,23 @@ inline std::pair<QString /*result*/, int /*end pos*/> match(const QString& patte
 
 void CAutoUpdaterGithub::updateCheckRequestFinished(QNetworkReply * reply)
 {
+	if (!reply)
+		return;
+
+	reply->deleteLater();
+
 	if (reply->error() != QNetworkReply::NoError)
 	{
 		if (_listener)
 			_listener->onUpdateErrorCallback(reply->errorString());
 
+		return;
+	}
+
+	if (reply->bytesAvailable() <= 0)
+	{
+		if (_listener)
+			_listener->onUpdateErrorCallback("No data downloaded.");
 		return;
 	}
 
@@ -100,3 +128,44 @@ void CAutoUpdaterGithub::updateCheckRequestFinished(QNetworkReply * reply)
 		_listener->onUpdateAvailable(changelog);
 }
 
+void CAutoUpdaterGithub::updateDownloadFinished(QNetworkReply * reply)
+{
+	if (!reply)
+		return;
+
+	reply->deleteLater();
+
+	if (reply->error() != QNetworkReply::NoError)
+	{
+		if (_listener)
+			_listener->onUpdateErrorCallback(reply->errorString());
+
+		return;
+	}
+
+	if (reply->bytesAvailable() <= 0)
+	{
+		if (_listener)
+			_listener->onUpdateErrorCallback("No data downloaded.");
+		return;
+	}
+
+	QFile tempExeFile(QDir::tempPath() + '/' + QCoreApplication::applicationName() + ".exe");
+	if (!tempExeFile.open(QFile::WriteOnly))
+	{
+		if (_listener)
+			_listener->onUpdateErrorCallback("Failed to open temporary file.");
+		return;
+	}
+	tempExeFile.write(reply->readAll());
+	tempExeFile.close();
+
+	if (!QProcess::startDetached(tempExeFile.fileName()) && _listener)
+		_listener->onUpdateErrorCallback("Failed to launch the downloaded update.");
+}
+
+void CAutoUpdaterGithub::onDownloadProgress(qint64 bytesReceived, qint64 bytesTotal)
+{
+	if (_listener)
+		_listener->onUpdateDownloadProgress(bytesReceived < bytesTotal ? bytesReceived / (float)bytesTotal : 100.0f);
+}

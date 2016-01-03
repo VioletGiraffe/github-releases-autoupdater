@@ -2,7 +2,7 @@ TARGET = autoupdater
 TEMPLATE = lib
 CONFIG += staticlib
 
-QT = core network gui
+QT = core network
 CONFIG += c++11
 
 mac* | linux*{

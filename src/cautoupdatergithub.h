@@ -40,6 +40,8 @@ public:
 
 private slots:
 	void updateCheckRequestFinished(QNetworkReply * reply);
+	void updateDownloadFinished(QNetworkReply * reply);
+	void onDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
 
 private:
 	const QString _updatePageAddress;
