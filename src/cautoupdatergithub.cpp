@@ -143,12 +143,31 @@ void CAutoUpdaterGithub::updateDownloadFinished(QNetworkReply * reply)
 		return;
 	}
 
-	if (reply->bytesAvailable() <= 0)
+	const QUrl redirectUrl = reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
+	if (!redirectUrl.isEmpty())
 	{
-		if (_listener)
-			_listener->onUpdateErrorCallback("No data downloaded.");
+		// We are being redirected
+		QNetworkReply * reply = _networkManager.get(QNetworkRequest(redirectUrl));
+		if (!reply)
+		{
+			if (_listener)
+				_listener->onUpdateErrorCallback("Network request rejected.");
+			return;
+		}
+
+		connect(reply, &QNetworkReply::downloadProgress, this, &CAutoUpdaterGithub::onDownloadProgress);
+		connect(&_networkManager, &QNetworkAccessManager::finished, this, &CAutoUpdaterGithub::updateDownloadFinished, Qt::UniqueConnection);
+
 		return;
 	}
+
+
+// 	if (reply->bytesAvailable() <= 0)
+// 	{
+// 		if (_listener)
+// 			_listener->onUpdateErrorCallback("No data downloaded.");
+// 		return;
+// 	}
 
 	QFile tempExeFile(QDir::tempPath() + '/' + QCoreApplication::applicationName() + ".exe");
 	if (!tempExeFile.open(QFile::WriteOnly))
