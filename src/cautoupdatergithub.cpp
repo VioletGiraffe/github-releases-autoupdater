@@ -7,6 +7,7 @@
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QProcess>
+#include <QStringBuilder>
 
 #include <assert.h>
 #include <utility>
@@ -36,7 +37,7 @@ void CAutoUpdaterGithub::checkForUpdates()
 		return;
 	}
 
-	connect(&_networkManager, &QNetworkAccessManager::finished, this, &CAutoUpdaterGithub::updateCheckRequestFinished, Qt::UniqueConnection);
+	connect(reply, &QNetworkReply::finished, this, &CAutoUpdaterGithub::updateCheckRequestFinished, Qt::UniqueConnection);
 }
 
 void CAutoUpdaterGithub::downloadAndInstallUpdate()
@@ -50,7 +51,7 @@ void CAutoUpdaterGithub::downloadAndInstallUpdate()
 	}
 
 	connect(reply, &QNetworkReply::downloadProgress, this, &CAutoUpdaterGithub::onDownloadProgress);
-	connect(&_networkManager, &QNetworkAccessManager::finished, this, &CAutoUpdaterGithub::updateDownloadFinished, Qt::UniqueConnection);
+	connect(reply, &QNetworkReply::finished, this, &CAutoUpdaterGithub::updateDownloaded, Qt::UniqueConnection);
 }
 
 inline std::pair<QString /*result*/, int /*end pos*/> match(const QString& pattern, const QString& text, int from)
@@ -77,8 +78,9 @@ inline std::pair<QString /*result*/, int /*end pos*/> match(const QString& patte
 	return std::make_pair(text.mid(leftDelimiterStart + delimiters[0].length(), resultLength), rightDelimiterStart + delimiters[1].length());
 }
 
-void CAutoUpdaterGithub::updateCheckRequestFinished(QNetworkReply * reply)
+void CAutoUpdaterGithub::updateCheckRequestFinished()
 {
+	QNetworkReply* reply = qobject_cast<QNetworkReply *>(sender());
 	if (!reply)
 		return;
 
@@ -106,9 +108,6 @@ void CAutoUpdaterGithub::updateCheckRequestFinished(QNetworkReply * reply)
 	static const QString downloadLinkPattern = "<ul class=\"release-downloads\">\n          <li>\n            <a href=\"*\"";
 	int pos = 0;
 	_updateDownloadLink.clear();
-	QFile f("H:\\1.htm");
-	f.open(QFile::WriteOnly);
-	f.write(text.toUtf8());
 	while (pos < text.length())
 	{
 		// Version first
@@ -128,8 +127,9 @@ void CAutoUpdaterGithub::updateCheckRequestFinished(QNetworkReply * reply)
 		_listener->onUpdateAvailable(changelog);
 }
 
-void CAutoUpdaterGithub::updateDownloadFinished(QNetworkReply * reply)
+void CAutoUpdaterGithub::updateDownloaded()
 {
+	QNetworkReply* reply = qobject_cast<QNetworkReply *>(sender());
 	if (!reply)
 		return;
 
@@ -147,7 +147,7 @@ void CAutoUpdaterGithub::updateDownloadFinished(QNetworkReply * reply)
 	if (!redirectUrl.isEmpty())
 	{
 		// We are being redirected
-		QNetworkReply * reply = _networkManager.get(QNetworkRequest(redirectUrl));
+		reply = _networkManager.get(QNetworkRequest(redirectUrl));
 		if (!reply)
 		{
 			if (_listener)
@@ -156,20 +156,20 @@ void CAutoUpdaterGithub::updateDownloadFinished(QNetworkReply * reply)
 		}
 
 		connect(reply, &QNetworkReply::downloadProgress, this, &CAutoUpdaterGithub::onDownloadProgress);
-		connect(&_networkManager, &QNetworkAccessManager::finished, this, &CAutoUpdaterGithub::updateDownloadFinished, Qt::UniqueConnection);
+		connect(reply, &QNetworkReply::finished, this, &CAutoUpdaterGithub::updateDownloaded, Qt::UniqueConnection);
 
 		return;
 	}
 
 
-// 	if (reply->bytesAvailable() <= 0)
-// 	{
-// 		if (_listener)
-// 			_listener->onUpdateErrorCallback("No data downloaded.");
-// 		return;
-// 	}
+	if (reply->bytesAvailable() <= 0)
+	{
+		if (_listener)
+			_listener->onUpdateErrorCallback("No data downloaded.");
+		return;
+	}
 
-	QFile tempExeFile(QDir::tempPath() + '/' + QCoreApplication::applicationName() + ".exe");
+	QFile tempExeFile(QDir::tempPath() % '/' % QCoreApplication::applicationName() % ".exe");
 	if (!tempExeFile.open(QFile::WriteOnly))
 	{
 		if (_listener)
@@ -179,7 +179,7 @@ void CAutoUpdaterGithub::updateDownloadFinished(QNetworkReply * reply)
 	tempExeFile.write(reply->readAll());
 	tempExeFile.close();
 
-	if (!QProcess::startDetached(tempExeFile.fileName()) && _listener)
+	if (!QProcess::startDetached('\"' % tempExeFile.fileName() % '\"') && _listener)
 		_listener->onUpdateErrorCallback("Failed to launch the downloaded update.");
 }
 

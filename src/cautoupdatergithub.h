@@ -39,8 +39,8 @@ public:
 	void downloadAndInstallUpdate();
 
 private slots:
-	void updateCheckRequestFinished(QNetworkReply * reply);
-	void updateDownloadFinished(QNetworkReply * reply);
+	void updateCheckRequestFinished();
+	void updateDownloaded();
 	void onDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
 
 private:
