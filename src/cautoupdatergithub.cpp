@@ -1,5 +1,7 @@
 #include "cautoupdatergithub.h"
+#include "../cpputils/assert/advanced_assert.h"
 
+DISABLE_COMPILER_WARNINGS
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
@@ -8,8 +10,8 @@
 #include <QNetworkReply>
 #include <QProcess>
 #include <QStringBuilder>
+RESTORE_COMPILER_WARNINGS
 
-#include <assert.h>
 #include <utility>
 
 CAutoUpdaterGithub::CAutoUpdaterGithub(const QString& githubRepositoryAddress, const QString& currentVersionString, const std::function<bool (const QString&, const QString&)>& versionStringComparatorLessThan) :
@@ -33,7 +35,7 @@ void CAutoUpdaterGithub::checkForUpdates()
 	if (!reply)
 	{
 		if (_listener)
-			_listener->onUpdateErrorCallback("Network request rejected.");
+			_listener->onUpdateError("Network request rejected.");
 		return;
 	}
 
@@ -46,7 +48,7 @@ void CAutoUpdaterGithub::downloadAndInstallUpdate()
 	if (!reply)
 	{
 		if (_listener)
-			_listener->onUpdateErrorCallback("Network request rejected.");
+			_listener->onUpdateError("Network request rejected.");
 		return;
 	}
 
@@ -57,11 +59,7 @@ void CAutoUpdaterGithub::downloadAndInstallUpdate()
 inline std::pair<QString /*result*/, int /*end pos*/> match(const QString& pattern, const QString& text, int from)
 {
 	const auto delimiters = pattern.split('*');
-	if (delimiters.size() != 2)
-	{
-		assert(!"Invalid pattern");
-		return std::make_pair(QString(), -1);
-	}
+	assert_and_return_message_r(delimiters.size() == 2, "Invalid pattern", std::make_pair(QString(), -1));
 
 	const int leftDelimiterStart = text.indexOf(delimiters[0], from);
 	if (leftDelimiterStart < 0)
@@ -89,7 +87,7 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 	if (reply->error() != QNetworkReply::NoError)
 	{
 		if (_listener)
-			_listener->onUpdateErrorCallback(reply->errorString());
+			_listener->onUpdateError(reply->errorString());
 
 		return;
 	}
@@ -97,7 +95,7 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 	if (reply->bytesAvailable() <= 0)
 	{
 		if (_listener)
-			_listener->onUpdateErrorCallback("No data downloaded.");
+			_listener->onUpdateError("No data downloaded.");
 		return;
 	}
 
@@ -138,7 +136,7 @@ void CAutoUpdaterGithub::updateDownloaded()
 	if (reply->error() != QNetworkReply::NoError)
 	{
 		if (_listener)
-			_listener->onUpdateErrorCallback(reply->errorString());
+			_listener->onUpdateError(reply->errorString());
 
 		return;
 	}
@@ -151,7 +149,7 @@ void CAutoUpdaterGithub::updateDownloaded()
 		if (!reply)
 		{
 			if (_listener)
-				_listener->onUpdateErrorCallback("Network request rejected.");
+				_listener->onUpdateError("Network request rejected.");
 			return;
 		}
 
@@ -161,11 +159,13 @@ void CAutoUpdaterGithub::updateDownloaded()
 		return;
 	}
 
+	if (_listener)
+		_listener->onUpdateDownloadFinished();
 
 	if (reply->bytesAvailable() <= 0)
 	{
 		if (_listener)
-			_listener->onUpdateErrorCallback("No data downloaded.");
+			_listener->onUpdateError("No data downloaded.");
 		return;
 	}
 
@@ -173,14 +173,14 @@ void CAutoUpdaterGithub::updateDownloaded()
 	if (!tempExeFile.open(QFile::WriteOnly))
 	{
 		if (_listener)
-			_listener->onUpdateErrorCallback("Failed to open temporary file.");
+			_listener->onUpdateError("Failed to open temporary file.");
 		return;
 	}
 	tempExeFile.write(reply->readAll());
 	tempExeFile.close();
 
 	if (!QProcess::startDetached('\"' % tempExeFile.fileName() % '\"') && _listener)
-		_listener->onUpdateErrorCallback("Failed to launch the downloaded update.");
+		_listener->onUpdateError("Failed to launch the downloaded update.");
 }
 
 void CAutoUpdaterGithub::onDownloadProgress(qint64 bytesReceived, qint64 bytesTotal)
