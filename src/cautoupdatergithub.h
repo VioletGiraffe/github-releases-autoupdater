@@ -31,7 +31,10 @@ public:
 	};
 
 public:
-	CAutoUpdaterGithub(const QString& githubRepositoryAddress, const QString& currentVersionString, const std::function<bool (const QString&, const QString&)>& versionStringComparatorLessThan);
+	// If the string comparison functior is not supplied, case-insensitive natural sorting is used (using QCollator)
+	CAutoUpdaterGithub(const QString& githubRepositoryAddress,
+					   const QString& currentVersionString,
+					   const std::function<bool (const QString&, const QString&)>& versionStringComparatorLessThan = std::function<bool (const QString&, const QString&)>());
 
 	CAutoUpdaterGithub& operator=(const CAutoUpdaterGithub& other) = delete;
 

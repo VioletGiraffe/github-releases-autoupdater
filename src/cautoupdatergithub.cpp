@@ -2,6 +2,7 @@
 #include "../cpputils/assert/advanced_assert.h"
 
 DISABLE_COMPILER_WARNINGS
+#include <QCollator>
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
@@ -14,14 +15,19 @@ RESTORE_COMPILER_WARNINGS
 
 #include <utility>
 
+static const auto naturalSortQstringComparator = [](const QString& l, const QString& r) {
+	static QCollator collator;
+	collator.setCaseSensitivity(Qt::CaseInsensitive);
+	return collator.compare(l, r) == -1;
+};
+
 CAutoUpdaterGithub::CAutoUpdaterGithub(const QString& githubRepositoryAddress, const QString& currentVersionString, const std::function<bool (const QString&, const QString&)>& versionStringComparatorLessThan) :
 	_updatePageAddress(githubRepositoryAddress + "/releases/"),
 	_currentVersionString(currentVersionString),
-	_lessThanVersionStringComparator(versionStringComparatorLessThan)
+	_lessThanVersionStringComparator(versionStringComparatorLessThan ? versionStringComparatorLessThan : naturalSortQstringComparator)
 {
 	assert(githubRepositoryAddress.contains("https://github.com/"));
 	assert(!currentVersionString.isEmpty());
-	assert(versionStringComparatorLessThan);
 }
 
 void CAutoUpdaterGithub::setUpdateStatusListener(UpdateStatusListener* listener)
