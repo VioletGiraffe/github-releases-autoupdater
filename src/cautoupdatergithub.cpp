@@ -186,5 +186,5 @@ void CAutoUpdaterGithub::updateDownloaded()
 void CAutoUpdaterGithub::onDownloadProgress(qint64 bytesReceived, qint64 bytesTotal)
 {
 	if (_listener)
-		_listener->onUpdateDownloadProgress(bytesReceived < bytesTotal ? bytesReceived / (float)bytesTotal : 100.0f);
+		_listener->onUpdateDownloadProgress(bytesReceived < bytesTotal ? bytesReceived * 100 / (float)bytesTotal : 100.0f);
 }
