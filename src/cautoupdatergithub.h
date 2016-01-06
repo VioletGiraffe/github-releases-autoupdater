@@ -12,8 +12,6 @@ RESTORE_COMPILER_WARNINGS
 
 class CAutoUpdaterGithub : public QObject
 {
-	Q_OBJECT
-
 public:
 	struct VersionEntry {
 		QString versionString;
@@ -43,7 +41,7 @@ public:
 	void checkForUpdates();
 	void downloadAndInstallUpdate();
 
-private slots:
+private:
 	void updateCheckRequestFinished();
 	void updateDownloaded();
 	void onDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
