@@ -5,6 +5,10 @@ CONFIG += staticlib
 QT = core network
 CONFIG += c++11
 
+!updater_without_widgets{
+    QT += widgets gui
+}
+
 mac* | linux*{
     CONFIG(release, debug|release):CONFIG += Release
     CONFIG(debug, debug|release):CONFIG += Debug
@@ -43,3 +47,13 @@ HEADERS += \
 SOURCES += \
     src/cautoupdatergithub.cpp
 
+!updater_without_widgets{
+    SOURCES += \
+        src/updaterUI/cupdaterdialog.cpp
+
+    HEADERS += \
+        src/updaterUI/cupdaterdialog.h
+
+    FORMS += \
+        src/updaterUI/cupdaterdialog.ui
+}
