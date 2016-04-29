@@ -17,6 +17,7 @@ RESTORE_COMPILER_WARNINGS
 
 static const auto naturalSortQstringComparator = [](const QString& l, const QString& r) {
 	static QCollator collator;
+	collator.setNumericMode(true);
 	collator.setCaseSensitivity(Qt::CaseInsensitive);
 	return collator.compare(l, r) == -1;
 };
