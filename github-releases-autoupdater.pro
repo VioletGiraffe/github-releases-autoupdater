@@ -3,15 +3,15 @@ TEMPLATE = lib
 CONFIG += staticlib
 
 QT = core network
-CONFIG += c++11
+CONFIG += c++14
 
 !updater_without_widgets{
-    QT += widgets gui
+	QT += widgets gui
 }
 
 mac* | linux*{
-    CONFIG(release, debug|release):CONFIG += Release
-    CONFIG(debug, debug|release):CONFIG += Debug
+	CONFIG(release, debug|release):CONFIG += Release
+	CONFIG(debug, debug|release):CONFIG += Debug
 }
 
 Release:OUTPUT_DIR=release
@@ -42,18 +42,18 @@ mac* | linux* {
 }
 
 HEADERS += \
-    src/cautoupdatergithub.h
+	src/cautoupdatergithub.h
 
 SOURCES += \
-    src/cautoupdatergithub.cpp
+	src/cautoupdatergithub.cpp
 
 !updater_without_widgets{
-    SOURCES += \
-        src/updaterUI/cupdaterdialog.cpp
+	SOURCES += \
+		src/updaterUI/cupdaterdialog.cpp
 
-    HEADERS += \
-        src/updaterUI/cupdaterdialog.h
+	HEADERS += \
+		src/updaterUI/cupdaterdialog.h
 
-    FORMS += \
-        src/updaterUI/cupdaterdialog.ui
+	FORMS += \
+		src/updaterUI/cupdaterdialog.ui
 }
