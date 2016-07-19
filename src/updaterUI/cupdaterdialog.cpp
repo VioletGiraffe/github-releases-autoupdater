@@ -50,7 +50,7 @@ void CUpdaterDialog::applyUpdate()
 }
 
 // If no updates are found, the changelog is empty
-void CUpdaterDialog::onUpdateAvailable(CAutoUpdaterGithub::ChangeLog changelog)
+void CUpdaterDialog::onUpdateAvailable(CAutoUpdaterGithub::ChangeLog changelog, QString downloadLink)
 {
 	if (!changelog.empty())
 	{

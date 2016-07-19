@@ -15,6 +15,14 @@ RESTORE_COMPILER_WARNINGS
 
 #include <utility>
 
+#if defined _WIN32
+#define UPDATE_FILE_EXTENSION QStringLiteral(".exe")
+#elif defined __APPLE__
+#define UPDATE_FILE_EXTENSION QStringLiteral(".dmg")
+#else
+#define UPDATE_FILE_EXTENSION QStringLiteral(".unspecified_extension")
+#endif
+
 static const auto naturalSortQstringComparator = [](const QString& l, const QString& r) {
 	static QCollator collator;
 	collator.setNumericMode(true);
@@ -121,15 +129,19 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 			break;
 
 		const auto changeLogMatch = match(changelogPattern, text, versionMatch.second);
-		if (_updateDownloadLink.isEmpty())
-			_updateDownloadLink = match(downloadLinkPattern, text, changeLogMatch.second).first.prepend("https://github.com");
+		const QString link = match(downloadLinkPattern, text, changeLogMatch.second).first.prepend("https://github.com");
+		if (link.endsWith(UPDATE_FILE_EXTENSION))
+		{
+			assert_message_r(_updateDownloadLink.isEmpty(), "More than one suitable update URL detected");
+			_updateDownloadLink = link;
+		}
 
 		pos = changeLogMatch.second;
 		changelog.push_back({versionMatch.first, changeLogMatch.first.trimmed()});
 	}
 
 	if (_listener)
-		_listener->onUpdateAvailable(changelog);
+		_listener->onUpdateAvailable(changelog, _updateDownloadLink);
 }
 
 void CAutoUpdaterGithub::updateDownloaded()
