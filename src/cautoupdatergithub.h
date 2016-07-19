@@ -16,13 +16,14 @@ public:
 	struct VersionEntry {
 		QString versionString;
 		QString versionChanges;
+		QString versionUpdateUrl;
 	};
 
 	typedef std::vector<VersionEntry> ChangeLog;
 
 	struct UpdateStatusListener {
 		// If no updates are found, the changelog is empty
-		virtual void onUpdateAvailable(ChangeLog changelog, QString downloadLink) = 0;
+		virtual void onUpdateAvailable(ChangeLog changelog) = 0;
 		virtual void onUpdateDownloadProgress(float percentageDownloaded) = 0;
 		virtual void onUpdateDownloadFinished() = 0;
 		virtual void onUpdateError(QString errorMessage) = 0;
@@ -39,7 +40,7 @@ public:
 	void setUpdateStatusListener(UpdateStatusListener* listener);
 
 	void checkForUpdates();
-	void downloadAndInstallUpdate();
+	void downloadAndInstallUpdate(const QString& updateUrl);
 
 private:
 	void updateCheckRequestFinished();
@@ -54,7 +55,5 @@ private:
 	UpdateStatusListener* _listener = nullptr;
 
 	QNetworkAccessManager _networkManager;
-
-	QString _updateDownloadLink;
 };
 

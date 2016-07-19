@@ -13,8 +13,6 @@ DISABLE_COMPILER_WARNINGS
 #include <QStringBuilder>
 RESTORE_COMPILER_WARNINGS
 
-#include <utility>
-
 #if defined _WIN32
 #define UPDATE_FILE_EXTENSION QStringLiteral(".exe")
 #elif defined __APPLE__
@@ -57,9 +55,9 @@ void CAutoUpdaterGithub::checkForUpdates()
 	connect(reply, &QNetworkReply::finished, this, &CAutoUpdaterGithub::updateCheckRequestFinished, Qt::UniqueConnection);
 }
 
-void CAutoUpdaterGithub::downloadAndInstallUpdate()
+void CAutoUpdaterGithub::downloadAndInstallUpdate(const QString& updateUrl)
 {
-	QNetworkReply * reply = _networkManager.get(QNetworkRequest(QUrl(_updateDownloadLink)));
+	QNetworkReply * reply = _networkManager.get(QNetworkRequest(QUrl(updateUrl)));
 	if (!reply)
 	{
 		if (_listener)
@@ -71,24 +69,27 @@ void CAutoUpdaterGithub::downloadAndInstallUpdate()
 	connect(reply, &QNetworkReply::finished, this, &CAutoUpdaterGithub::updateDownloaded, Qt::UniqueConnection);
 }
 
-inline std::pair<QString /*result*/, int /*end pos*/> match(const QString& pattern, const QString& text, int from)
+inline QString match(const QString& pattern, const QString& text, int from, int& end)
 {
+	end = -1;
+
 	const auto delimiters = pattern.split('*');
-	assert_and_return_message_r(delimiters.size() == 2, "Invalid pattern", std::make_pair(QString(), -1));
+	assert_and_return_message_r(delimiters.size() == 2, "Invalid pattern", QString());
 
 	const int leftDelimiterStart = text.indexOf(delimiters[0], from);
 	if (leftDelimiterStart < 0)
-		return std::make_pair(QString(), -1);
+		return QString();
 
 	const int rightDelimiterStart = text.indexOf(delimiters[1], leftDelimiterStart + delimiters[0].length());
 	if (rightDelimiterStart < 0)
-		return std::make_pair(QString(), -1);
+		return QString();
 
 	const int resultLength = rightDelimiterStart - leftDelimiterStart - delimiters[0].length();
 	if (resultLength <= 0)
-		return std::make_pair(QString(), -1);
+		return QString();
 
-	return std::make_pair(text.mid(leftDelimiterStart + delimiters[0].length(), resultLength), rightDelimiterStart + delimiters[1].length());
+	end = rightDelimiterStart + delimiters[1].length();
+	return text.mid(leftDelimiterStart + delimiters[0].length(), resultLength);
 }
 
 void CAutoUpdaterGithub::updateCheckRequestFinished()
@@ -114,34 +115,41 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 		return;
 	}
 
-	const QString text = reply->readAll();
 	ChangeLog changelog;
 	static const QString changelogPattern = "<div class=\"markdown-body\">\n*</div>";
 	static const QString versionPattern = "/releases/tag/*\">";
-	static const QString downloadLinkPattern = "<ul class=\"release-downloads\">\n          <li>\n            <a href=\"*\"";
-	int pos = 0;
-	_updateDownloadLink.clear();
-	while (pos < text.length())
+	static const QString releaseUrlPattern = "<a href=\"*\"";
+	
+	const auto releases = QString(reply->readAll()).split("release-header");
+	// Skipping the 0 item because anything before the first "release-header" is not a release
+	for (int releaseIndex = 1, numItems = releases.size(); releaseIndex < numItems; ++releaseIndex)
 	{
-		// Version first
-		const auto versionMatch = match(versionPattern, text, pos);
-		if (!_lessThanVersionStringComparator(_currentVersionString, versionMatch.first))
-			break;
+		const QString& releaseText = releases[releaseIndex];
+	
+		int offset = 0;
+		const QString updateVersion = match(versionPattern, releaseText, offset, offset);
+		if (!naturalSortQstringComparator(_currentVersionString, updateVersion))
+			continue; // version <= _currentVersionString, skipping
 
-		const auto changeLogMatch = match(changelogPattern, text, versionMatch.second);
-		const QString link = match(downloadLinkPattern, text, changeLogMatch.second).first.prepend("https://github.com");
-		if (link.endsWith(UPDATE_FILE_EXTENSION))
+		const QString updateChanges = match(changelogPattern, releaseText, offset, offset);
+
+		QString url;
+		while (offset != -1)
 		{
-			assert_message_r(_updateDownloadLink.isEmpty(), "More than one suitable update URL detected");
-			_updateDownloadLink = link;
+			const QString newUrl = match(releaseUrlPattern, releaseText, offset, offset);
+			if (newUrl.endsWith(UPDATE_FILE_EXTENSION))
+			{
+				assert_message_r(url.isEmpty(), "More than one suitable update URL found");
+				url = newUrl;
+			}
 		}
 
-		pos = changeLogMatch.second;
-		changelog.push_back({versionMatch.first, changeLogMatch.first.trimmed()});
+		if (!url.isEmpty())
+			changelog.push_back({ updateVersion, updateChanges, "https://github.com" + url });
 	}
 
 	if (_listener)
-		_listener->onUpdateAvailable(changelog, _updateDownloadLink);
+		_listener->onUpdateAvailable(changelog);
 }
 
 void CAutoUpdaterGithub::updateDownloaded()

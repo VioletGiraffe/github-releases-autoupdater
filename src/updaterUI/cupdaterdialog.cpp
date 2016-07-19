@@ -46,11 +46,11 @@ void CUpdaterDialog::applyUpdate()
 	ui->lblOperationInProgress->setText("Downloading the update...");
 	ui->stackedWidget->setCurrentIndex(0);
 
-	_updater.downloadAndInstallUpdate();
+	_updater.downloadAndInstallUpdate(_latestUpdateUrl);
 }
 
 // If no updates are found, the changelog is empty
-void CUpdaterDialog::onUpdateAvailable(CAutoUpdaterGithub::ChangeLog changelog, QString downloadLink)
+void CUpdaterDialog::onUpdateAvailable(CAutoUpdaterGithub::ChangeLog changelog)
 {
 	if (!changelog.empty())
 	{
@@ -58,6 +58,7 @@ void CUpdaterDialog::onUpdateAvailable(CAutoUpdaterGithub::ChangeLog changelog, 
 		for (const auto& changelogItem: changelog)
 			ui->changeLogViewer->append("<b>" % changelogItem.versionString % "</b>" % '\n' % changelogItem.versionChanges % "<p></p>");
 
+		_latestUpdateUrl = changelog.front().versionUpdateUrl;
 		show();
 	}
 	else
