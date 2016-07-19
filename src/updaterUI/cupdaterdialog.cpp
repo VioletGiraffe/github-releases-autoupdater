@@ -4,6 +4,7 @@ DISABLE_COMPILER_WARNINGS
 #include "ui_cupdaterdialog.h"
 
 #include <QDebug>
+#include <QDesktopServices>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QStringBuilder>
@@ -40,6 +41,7 @@ CUpdaterDialog::~CUpdaterDialog()
 
 void CUpdaterDialog::applyUpdate()
 {
+#ifdef _WIN32
 	ui->progressBar->setMaximum(100);
 	ui->progressBar->setValue(0);
 	ui->lblPercentage->setVisible(true);
@@ -47,6 +49,17 @@ void CUpdaterDialog::applyUpdate()
 	ui->stackedWidget->setCurrentIndex(0);
 
 	_updater.downloadAndInstallUpdate(_latestUpdateUrl);
+#else
+	QMessageBox msg(
+		QMessageBox::Question,
+		tr("Manual update required"),
+		tr("Automatic update is not supported on this operating system. Do you want to download and install the update manually?"),
+		QMessageBox::Yes | QMessageBox::No,
+		this);
+
+	if (msg.exec() == QMessageBox::Yes)
+		QDesktopServices::openUrl(QUrl(_latestUpdateUrl));
+#endif
 }
 
 // If no updates are found, the changelog is empty
