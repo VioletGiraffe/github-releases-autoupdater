@@ -18,10 +18,10 @@ Release:OUTPUT_DIR=release
 Debug:OUTPUT_DIR=debug
 
 DESTDIR     = ../bin/$${OUTPUT_DIR}
-OBJECTS_DIR = ../build/$${OUTPUT_DIR}/autoupdater
-MOC_DIR     = ../build/$${OUTPUT_DIR}/autoupdater
-UI_DIR      = ../build/$${OUTPUT_DIR}/autoupdater
-RCC_DIR     = ../build/$${OUTPUT_DIR}/autoupdater
+OBJECTS_DIR = ../build/$${OUTPUT_DIR}/$${TARGET}
+MOC_DIR     = ../build/$${OUTPUT_DIR}/$${TARGET}
+UI_DIR      = ../build/$${OUTPUT_DIR}/$${TARGET}
+RCC_DIR     = ../build/$${OUTPUT_DIR}/$${TARGET}
 
 # Required for qDebug() to log function name, file and line in release build
 DEFINES += QT_MESSAGELOGCONTEXT
