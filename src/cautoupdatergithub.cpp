@@ -14,11 +14,11 @@ DISABLE_COMPILER_WARNINGS
 RESTORE_COMPILER_WARNINGS
 
 #if defined _WIN32
-#define UPDATE_FILE_EXTENSION QStringLiteral(".exe")
+#define UPDATE_FILE_EXTENSION QLatin1String(".exe")
 #elif defined __APPLE__
-#define UPDATE_FILE_EXTENSION QStringLiteral(".dmg")
+#define UPDATE_FILE_EXTENSION QLatin1String(".dmg")
 #else
-#define UPDATE_FILE_EXTENSION QStringLiteral(".unspecified_extension")
+#define UPDATE_FILE_EXTENSION QLatin1String(".unspecified_extension")
 #endif
 
 static const auto naturalSortQstringComparator = [](const QString& l, const QString& r) {
