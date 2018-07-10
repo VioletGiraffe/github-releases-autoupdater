@@ -3,15 +3,13 @@ TEMPLATE = lib
 CONFIG += staticlib
 
 QT = core network
-CONFIG += c++14
+!updater_without_widgets:QT += widgets gui
 
-!updater_without_widgets{
-	QT += widgets gui
-}
+CONFIG += strict_c++ c++14
 
 mac* | linux*{
-	CONFIG(release, debug|release):CONFIG += Release
-	CONFIG(debug, debug|release):CONFIG += Debug
+	CONFIG(release, debug|release):CONFIG *= Release optimize_full
+	CONFIG(debug, debug|release):CONFIG *= Debug
 }
 
 contains(QT_ARCH, x86_64) {
