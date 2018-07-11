@@ -127,7 +127,12 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 		const QString& releaseText = releases[releaseIndex];
 	
 		int offset = 0;
-		const QString updateVersion = match(versionPattern, releaseText, offset, offset);
+		QString updateVersion = match(versionPattern, releaseText, offset, offset);
+		if (updateVersion.startsWith(QStringLiteral(".v")))
+			updateVersion.remove(0, 2);
+		else if (updateVersion.startsWith('v'))
+			updateVersion.remove(0, 1);
+
 		if (!naturalSortQstringComparator(_currentVersionString, updateVersion))
 			continue; // version <= _currentVersionString, skipping
 
