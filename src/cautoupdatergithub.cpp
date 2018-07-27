@@ -4,7 +4,6 @@
 DISABLE_COMPILER_WARNINGS
 #include <QCollator>
 #include <QCoreApplication>
-#include <QDebug>
 #include <QDir>
 #include <QFile>
 #include <QNetworkRequest>
@@ -116,9 +115,9 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 	}
 
 	ChangeLog changelog;
-	static const QString changelogPattern = "<div class=\"markdown-body\">\n*</div>";
-	static const QString versionPattern = "/releases/tag/*\">";
-	static const QString releaseUrlPattern = "<a href=\"*\"";
+	const QString changelogPattern = QStringLiteral("<div class=\"markdown-body\">\n*</div>");
+	const QString versionPattern = QStringLiteral("/releases/tag/*\">");
+	const QString releaseUrlPattern = QStringLiteral("<a href=\"*\"");
 	
 	const auto releases = QString(reply->readAll()).split("release-header");
 	// Skipping the 0 item because anything before the first "release-header" is not a release
@@ -139,6 +138,7 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 		const QString updateChanges = match(changelogPattern, releaseText, offset, offset);
 
 		QString url;
+		offset = 0; // Gotta start scanning from the beginning again, since the release URL could be before the release description
 		while (offset != -1)
 		{
 			const QString newUrl = match(releaseUrlPattern, releaseText, offset, offset);
