@@ -5,7 +5,6 @@ DISABLE_COMPILER_WARNINGS
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDir>
-#include <QFile>
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QProcess>
@@ -56,7 +55,21 @@ void CAutoUpdaterGithub::checkForUpdates()
 
 void CAutoUpdaterGithub::downloadAndInstallUpdate(const QString& updateUrl)
 {
-	QNetworkReply * reply = _networkManager.get(QNetworkRequest(QUrl(updateUrl)));
+	assert_r(!_downloadedBinaryFile.isOpen());
+
+	_downloadedBinaryFile.setFileName(QDir::tempPath() % '/' % QCoreApplication::applicationName() % UPDATE_FILE_EXTENSION);
+	if (!_downloadedBinaryFile.open(QFile::WriteOnly))
+	{
+		if (_listener)
+			_listener->onUpdateError("Failed to open temporary file " + _downloadedBinaryFile.fileName());
+		return;
+	}
+
+	QNetworkRequest request((QUrl(updateUrl)));
+	request.setSslConfiguration(QSslConfiguration::defaultConfiguration()); // HTTPS
+	request.setMaximumRedirectsAllowed(5);
+	request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+	QNetworkReply * reply = _networkManager.get(request);
 	if (!reply)
 	{
 		if (_listener)
@@ -64,11 +77,12 @@ void CAutoUpdaterGithub::downloadAndInstallUpdate(const QString& updateUrl)
 		return;
 	}
 
+	connect(reply, &QNetworkReply::readyRead, this, &CAutoUpdaterGithub::onNewDataDownloaded);
 	connect(reply, &QNetworkReply::downloadProgress, this, &CAutoUpdaterGithub::onDownloadProgress);
 	connect(reply, &QNetworkReply::finished, this, &CAutoUpdaterGithub::updateDownloaded, Qt::UniqueConnection);
 }
 
-inline QString match(const QString& pattern, const QString& text, int from, int& end)
+static QString match(const QString& pattern, const QString& text, int from, int& end)
 {
 	end = -1;
 
@@ -159,6 +173,8 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 
 void CAutoUpdaterGithub::updateDownloaded()
 {
+	_downloadedBinaryFile.close();
+
 	QNetworkReply* reply = qobject_cast<QNetworkReply *>(sender());
 	if (!reply)
 		return;
@@ -173,45 +189,10 @@ void CAutoUpdaterGithub::updateDownloaded()
 		return;
 	}
 
-	const QUrl redirectUrl = reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
-	if (!redirectUrl.isEmpty())
-	{
-		// We are being redirected
-		reply = _networkManager.get(QNetworkRequest(redirectUrl));
-		if (!reply)
-		{
-			if (_listener)
-				_listener->onUpdateError("Network request rejected.");
-			return;
-		}
-
-		connect(reply, &QNetworkReply::downloadProgress, this, &CAutoUpdaterGithub::onDownloadProgress);
-		connect(reply, &QNetworkReply::finished, this, &CAutoUpdaterGithub::updateDownloaded, Qt::UniqueConnection);
-
-		return;
-	}
-
 	if (_listener)
 		_listener->onUpdateDownloadFinished();
 
-	if (reply->bytesAvailable() <= 0)
-	{
-		if (_listener)
-			_listener->onUpdateError("No data downloaded.");
-		return;
-	}
-
-	QFile tempExeFile(QDir::tempPath() % '/' % QCoreApplication::applicationName() % ".exe");
-	if (!tempExeFile.open(QFile::WriteOnly))
-	{
-		if (_listener)
-			_listener->onUpdateError("Failed to open temporary file.");
-		return;
-	}
-	tempExeFile.write(reply->readAll());
-	tempExeFile.close();
-
-	if (!QProcess::startDetached('\"' % tempExeFile.fileName() % '\"') && _listener)
+	if (!QProcess::startDetached('\"' % _downloadedBinaryFile.fileName() % '\"') && _listener)
 		_listener->onUpdateError("Failed to launch the downloaded update.");
 }
 
@@ -219,4 +200,12 @@ void CAutoUpdaterGithub::onDownloadProgress(qint64 bytesReceived, qint64 bytesTo
 {
 	if (_listener)
 		_listener->onUpdateDownloadProgress(bytesReceived < bytesTotal ? bytesReceived * 100 / (float)bytesTotal : 100.0f);
+}
+
+void CAutoUpdaterGithub::onNewDataDownloaded()
+{
+	QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
+	assert_and_return_r(reply, );
+
+	_downloadedBinaryFile.write(reply->readAll());
 }

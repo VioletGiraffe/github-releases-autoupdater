@@ -3,6 +3,7 @@
 #include "../cpputils/compiler/compiler_warnings_control.h"
 
 DISABLE_COMPILER_WARNINGS
+#include <QFile>
 #include <QNetworkAccessManager>
 #include <QString>
 RESTORE_COMPILER_WARNINGS
@@ -46,8 +47,10 @@ private:
 	void updateCheckRequestFinished();
 	void updateDownloaded();
 	void onDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
+	void onNewDataDownloaded();
 
 private:
+	QFile _downloadedBinaryFile;
 	const QString _updatePageAddress;
 	const QString _currentVersionString;
 	const std::function<bool (const QString&, const QString&)> _lessThanVersionStringComparator;
