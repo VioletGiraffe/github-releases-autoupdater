@@ -1,12 +1,8 @@
 #pragma once
 
-#include "../cpputils/compiler/compiler_warnings_control.h"
-
-DISABLE_COMPILER_WARNINGS
 #include <QFile>
 #include <QNetworkAccessManager>
 #include <QString>
-RESTORE_COMPILER_WARNINGS
 
 #include <functional>
 #include <vector>
@@ -20,7 +16,7 @@ public:
 		QString versionUpdateUrl;
 	};
 
-	typedef std::vector<VersionEntry> ChangeLog;
+	using ChangeLog = std::vector<VersionEntry>;
 
 	struct UpdateStatusListener {
 		// If no updates are found, the changelog is empty

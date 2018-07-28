@@ -61,10 +61,15 @@ mac* | linux* {
 }
 
 HEADERS += \
-	src/cautoupdatergithub.h
+	src/cautoupdatergithub.h \
+	src/updateinstaller.hpp
 
 SOURCES += \
 	src/cautoupdatergithub.cpp
+
+win*:SOURCES += src/updateinstaller_win.cpp
+mac*:SOURCES += src/updateinstaller_mac.cpp
+linux*:SOURCES += src/updateinstaller_linux.cpp
 
 !updater_without_widgets{
 	SOURCES += \

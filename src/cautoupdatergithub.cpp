@@ -1,22 +1,20 @@
 #include "cautoupdatergithub.h"
-#include "../cpputils/assert/advanced_assert.h"
+#include "updateinstaller.hpp"
 
-DISABLE_COMPILER_WARNINGS
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDir>
 #include <QNetworkRequest>
 #include <QNetworkReply>
-#include <QProcess>
-#include <QStringBuilder>
-RESTORE_COMPILER_WARNINGS
+
+#include <assert.h>
 
 #if defined _WIN32
 #define UPDATE_FILE_EXTENSION QLatin1String(".exe")
 #elif defined __APPLE__
 #define UPDATE_FILE_EXTENSION QLatin1String(".dmg")
 #else
-#define UPDATE_FILE_EXTENSION QLatin1String(".unspecified_extension")
+#define UPDATE_FILE_EXTENSION QLatin1String(".AppImage")
 #endif
 
 static const auto naturalSortQstringComparator = [](const QString& l, const QString& r) {
@@ -55,9 +53,9 @@ void CAutoUpdaterGithub::checkForUpdates()
 
 void CAutoUpdaterGithub::downloadAndInstallUpdate(const QString& updateUrl)
 {
-	assert_r(!_downloadedBinaryFile.isOpen());
+	assert(!_downloadedBinaryFile.isOpen());
 
-	_downloadedBinaryFile.setFileName(QDir::tempPath() % '/' % QCoreApplication::applicationName() % UPDATE_FILE_EXTENSION);
+	_downloadedBinaryFile.setFileName(QDir::tempPath() + '/' + QCoreApplication::applicationName() + UPDATE_FILE_EXTENSION);
 	if (!_downloadedBinaryFile.open(QFile::WriteOnly))
 	{
 		if (_listener)
@@ -87,19 +85,23 @@ static QString match(const QString& pattern, const QString& text, int from, int&
 	end = -1;
 
 	const auto delimiters = pattern.split('*');
-	assert_and_return_message_r(delimiters.size() == 2, "Invalid pattern", QString());
+	if (delimiters.size() != 2)
+	{
+		Q_ASSERT_X(delimiters.size() != 2, __FUNCTION__, "Invalid pattern");
+		return {};
+	}
 
 	const int leftDelimiterStart = text.indexOf(delimiters[0], from);
 	if (leftDelimiterStart < 0)
-		return QString();
+		return {};
 
 	const int rightDelimiterStart = text.indexOf(delimiters[1], leftDelimiterStart + delimiters[0].length());
 	if (rightDelimiterStart < 0)
-		return QString();
+		return {};
 
 	const int resultLength = rightDelimiterStart - leftDelimiterStart - delimiters[0].length();
 	if (resultLength <= 0)
-		return QString();
+		return {};
 
 	end = rightDelimiterStart + delimiters[1].length();
 	return text.mid(leftDelimiterStart + delimiters[0].length(), resultLength);
@@ -107,7 +109,7 @@ static QString match(const QString& pattern, const QString& text, int from, int&
 
 void CAutoUpdaterGithub::updateCheckRequestFinished()
 {
-	QNetworkReply* reply = qobject_cast<QNetworkReply *>(sender());
+	auto reply = qobject_cast<QNetworkReply *>(sender());
 	if (!reply)
 		return;
 
@@ -132,13 +134,13 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 	const QString changelogPattern = QStringLiteral("<div class=\"markdown-body\">\n*</div>");
 	const QString versionPattern = QStringLiteral("/releases/tag/*\">");
 	const QString releaseUrlPattern = QStringLiteral("<a href=\"*\"");
-	
+
 	const auto releases = QString(reply->readAll()).split("release-header");
 	// Skipping the 0 item because anything before the first "release-header" is not a release
 	for (int releaseIndex = 1, numItems = releases.size(); releaseIndex < numItems; ++releaseIndex)
 	{
 		const QString& releaseText = releases[releaseIndex];
-	
+
 		int offset = 0;
 		QString updateVersion = match(versionPattern, releaseText, offset, offset);
 		if (updateVersion.startsWith(QStringLiteral(".v")))
@@ -158,7 +160,7 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 			const QString newUrl = match(releaseUrlPattern, releaseText, offset, offset);
 			if (newUrl.endsWith(UPDATE_FILE_EXTENSION))
 			{
-				assert_message_r(url.isEmpty(), "More than one suitable update URL found");
+				Q_ASSERT_X(url.isEmpty(), __FUNCTION__,"More than one suitable update URL found");
 				url = newUrl;
 			}
 		}
@@ -175,7 +177,7 @@ void CAutoUpdaterGithub::updateDownloaded()
 {
 	_downloadedBinaryFile.close();
 
-	QNetworkReply* reply = qobject_cast<QNetworkReply *>(sender());
+	auto reply = qobject_cast<QNetworkReply *>(sender());
 	if (!reply)
 		return;
 
@@ -192,7 +194,7 @@ void CAutoUpdaterGithub::updateDownloaded()
 	if (_listener)
 		_listener->onUpdateDownloadFinished();
 
-	if (!QProcess::startDetached('\"' % _downloadedBinaryFile.fileName() % '\"') && _listener)
+	if (!UpdateInstaller::install(_downloadedBinaryFile.fileName()) && _listener)
 		_listener->onUpdateError("Failed to launch the downloaded update.");
 }
 
@@ -204,8 +206,9 @@ void CAutoUpdaterGithub::onDownloadProgress(qint64 bytesReceived, qint64 bytesTo
 
 void CAutoUpdaterGithub::onNewDataDownloaded()
 {
-	QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
-	assert_and_return_r(reply, );
+	auto reply = qobject_cast<QNetworkReply*>(sender());
+	if (!reply)
+		return;
 
 	_downloadedBinaryFile.write(reply->readAll());
 }
