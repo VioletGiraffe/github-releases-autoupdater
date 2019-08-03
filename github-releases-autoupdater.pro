@@ -7,7 +7,7 @@ QT = core network
 
 CONFIG += strict_c++ c++14
 
-mac* | linux*{
+mac* | linux* | freebsd{
 	CONFIG(release, debug|release):CONFIG *= Release optimize_full
 	CONFIG(debug, debug|release):CONFIG *= Debug
 }
@@ -51,7 +51,7 @@ win*{
 	Release:QMAKE_LFLAGS += /OPT:REF /OPT:ICF
 }
 
-mac* | linux* {
+mac* | linux* | freebsd{
 	QMAKE_CFLAGS   += -pedantic-errors -std=c99
 	QMAKE_CXXFLAGS += -pedantic-errors
 	QMAKE_CXXFLAGS_WARN_ON = -Wall -Wno-c++11-extensions -Wno-local-type-template-args -Wno-deprecated-register
@@ -70,6 +70,7 @@ SOURCES += \
 win*:SOURCES += src/updateinstaller_win.cpp
 mac*:SOURCES += src/updateinstaller_mac.cpp
 linux*:SOURCES += src/updateinstaller_linux.cpp
+freebsd:SOURCES += src/updateinstaller_freebsd.cpp
 
 !updater_without_widgets{
 	SOURCES += \
