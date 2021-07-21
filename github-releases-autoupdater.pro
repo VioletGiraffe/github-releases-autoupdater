@@ -5,7 +5,7 @@ CONFIG += staticlib
 QT = core network
 !updater_without_widgets:QT += widgets gui
 
-CONFIG += strict_c++ c++17
+CONFIG += strict_c++ c++2a
 
 mac* | linux* | freebsd{
 	CONFIG(release, debug|release):CONFIG *= Release optimize_full
@@ -42,7 +42,7 @@ DEFINES += QT_MESSAGELOGCONTEXT
 
 win*{
 	QMAKE_CXXFLAGS += /MP /Zi /wd4251
-	QMAKE_CXXFLAGS += /std:c++17 /permissive- /Zc:__cplusplus
+	QMAKE_CXXFLAGS += /std:c++latest /permissive- /Zc:__cplusplus
 	QMAKE_CXXFLAGS_WARN_ON = /W4
 	DEFINES += WIN32_LEAN_AND_MEAN NOMINMAX
 
