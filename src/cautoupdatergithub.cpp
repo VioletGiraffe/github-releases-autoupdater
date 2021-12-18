@@ -4,8 +4,8 @@
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDir>
-#include <QNetworkRequest>
 #include <QNetworkReply>
+#include <QNetworkRequest>
 
 #include <assert.h>
 
