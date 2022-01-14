@@ -1,5 +1,6 @@
 #include "cupdaterdialog.h"
 
+DISABLE_COMPILER_WARNINGS
 #include "ui_cupdaterdialog.h"
 
 #include <QDebug>
@@ -7,6 +8,7 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QStringBuilder>
+RESTORE_COMPILER_WARNINGS
 
 CUpdaterDialog::CUpdaterDialog(QWidget *parent, const QString& githubRepoAddress, const QString& versionString, bool silentCheck) :
 	QDialog(parent),

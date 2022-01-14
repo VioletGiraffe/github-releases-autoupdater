@@ -1,13 +1,17 @@
 #pragma once
 
+#include "../cpp-template-utils/compiler/compiler_warnings_control.h"
+
+DISABLE_COMPILER_WARNINGS
 #include <QFile>
 #include <QNetworkAccessManager>
 #include <QString>
+RESTORE_COMPILER_WARNINGS
 
 #include <functional>
 #include <vector>
 
-class CAutoUpdaterGithub : public QObject
+class CAutoUpdaterGithub final : public QObject
 {
 public:
 	struct VersionEntry {

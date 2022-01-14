@@ -2,7 +2,9 @@
 
 #include "../cautoupdatergithub.h"
 
+DISABLE_COMPILER_WARNINGS
 #include <QDialog>
+RESTORE_COMPILER_WARNINGS
 
 namespace Ui {
 	class CUpdaterDialog;

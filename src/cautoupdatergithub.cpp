@@ -1,11 +1,13 @@
 #include "cautoupdatergithub.h"
 #include "updateinstaller.hpp"
 
+DISABLE_COMPILER_WARNINGS
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDir>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+RESTORE_COMPILER_WARNINGS
 
 #include <assert.h>
 
