@@ -42,7 +42,7 @@ CUpdaterDialog::~CUpdaterDialog()
 void CUpdaterDialog::applyUpdate()
 {
 #ifdef _WIN32
-	if (_latestUpdateUrl.endsWith("exe"))
+	if (_latestUpdateUrl.endsWith(UPDATE_FILE_EXTENSION))
 	{
 		ui->progressBar->setMaximum(100);
 		ui->progressBar->setValue(0);
