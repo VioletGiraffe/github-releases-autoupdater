@@ -11,14 +11,6 @@ RESTORE_COMPILER_WARNINGS
 
 #include <assert.h>
 
-#if defined _WIN32
-#define UPDATE_FILE_EXTENSION QLatin1String(".exe")
-#elif defined __APPLE__
-#define UPDATE_FILE_EXTENSION QLatin1String(".dmg")
-#else
-#define UPDATE_FILE_EXTENSION QLatin1String(".AppImage")
-#endif
-
 static const auto naturalSortQstringComparator = [](const QString& l, const QString& r) {
 	static QCollator collator;
 	collator.setNumericMode(true);
@@ -135,11 +127,11 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 	}
 
 	ChangeLog changelog;
-	const QString changelogPattern = QStringLiteral("<div class=\"markdown-body\">\n*</div>");
-	const QString versionPattern = QStringLiteral("/releases/tag/*\">");
+    	const QString changelogPattern = QStringLiteral("markdown-body my-3\">*</div>");
+    	const QString versionPattern = QStringLiteral("/releases/tag/*\"");
 	const QString releaseUrlPattern = QStringLiteral("<a href=\"*\"");
 
-	const auto releases = QString(reply->readAll()).split("release-header");
+	const auto releases = QString(reply->readAll()).split("release-card");
 	// Skipping the 0 item because anything before the first "release-header" is not a release
 	for (int releaseIndex = 1, numItems = releases.size(); releaseIndex < numItems; ++releaseIndex)
 	{
@@ -147,6 +139,8 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 
 		int offset = 0;
 		QString updateVersion = match(versionPattern, releaseText, offset, offset);
+		QString urlToUpdatePage = _updatePageAddress + "tag/" + updateVersion;
+			
 		if (updateVersion.startsWith(QStringLiteral(".v")))
 			updateVersion.remove(0, 2);
 		else if (updateVersion.startsWith('v'))
@@ -169,8 +163,8 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 			}
 		}
 
-		if (!url.isEmpty())
-			changelog.push_back({ updateVersion, updateChanges, "https://github.com" + url });
+		// GitHub seems to dynamically add assets, which don't show up in the html, so we provide a link to the release page instead
+		changelog.push_back({ updateVersion, updateChanges, !url.isEmpty() ? "https://github.com" + url : urlToUpdatePage });
 	}
 
 	if (_listener)

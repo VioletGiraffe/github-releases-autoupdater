@@ -42,13 +42,19 @@ CUpdaterDialog::~CUpdaterDialog()
 void CUpdaterDialog::applyUpdate()
 {
 #ifdef _WIN32
-	ui->progressBar->setMaximum(100);
-	ui->progressBar->setValue(0);
-	ui->lblPercentage->setVisible(true);
-	ui->lblOperationInProgress->setText("Downloading the update...");
-	ui->stackedWidget->setCurrentIndex(0);
+	if (_latestUpdateUrl.endsWith(UPDATE_FILE_EXTENSION))
+	{
+		ui->progressBar->setMaximum(100);
+		ui->progressBar->setValue(0);
+		ui->lblPercentage->setVisible(true);
+		ui->lblOperationInProgress->setText("Downloading the update...");
+		ui->stackedWidget->setCurrentIndex(0);
 
-	_updater.downloadAndInstallUpdate(_latestUpdateUrl);
+		_updater.downloadAndInstallUpdate(_latestUpdateUrl);
+	} else {
+		QDesktopServices::openUrl(QUrl(_latestUpdateUrl));
+		accept();
+	}
 #else
 	QMessageBox msg(
 		QMessageBox::Question,
