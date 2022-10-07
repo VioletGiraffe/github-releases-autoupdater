@@ -127,8 +127,8 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 	}
 
 	ChangeLog changelog;
-	const QString changelogPattern = QStringLiteral("<div class=\"markdown-body my-3\">*</div>");
-	const QString versionPattern = QStringLiteral("/releases/tag/*\">");
+    	const QString changelogPattern = QStringLiteral("markdown-body my-3\">*</div>");
+    	const QString versionPattern = QStringLiteral("/releases/tag/*\"");
 	const QString releaseUrlPattern = QStringLiteral("<a href=\"*\"");
 
 	const auto releases = QString(reply->readAll()).split("release-card");
