@@ -11,6 +11,14 @@ RESTORE_COMPILER_WARNINGS
 #include <functional>
 #include <vector>
 
+#if defined _WIN32
+#define UPDATE_FILE_EXTENSION QLatin1String(".exe")
+#elif defined __APPLE__
+#define UPDATE_FILE_EXTENSION QLatin1String(".dmg")
+#else
+#define UPDATE_FILE_EXTENSION QLatin1String(".AppImage")
+#endif
+
 class CAutoUpdaterGithub final : public QObject
 {
 public:
