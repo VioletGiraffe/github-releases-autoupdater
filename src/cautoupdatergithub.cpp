@@ -11,14 +11,6 @@ RESTORE_COMPILER_WARNINGS
 
 #include <assert.h>
 
-#if defined _WIN32
-#define UPDATE_FILE_EXTENSION QLatin1String(".exe")
-#elif defined __APPLE__
-#define UPDATE_FILE_EXTENSION QLatin1String(".dmg")
-#else
-#define UPDATE_FILE_EXTENSION QLatin1String(".AppImage")
-#endif
-
 static const auto naturalSortQstringComparator = [](const QString& l, const QString& r) {
 	static QCollator collator;
 	collator.setNumericMode(true);
