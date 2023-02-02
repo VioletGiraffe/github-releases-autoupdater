@@ -21,11 +21,11 @@ static const auto naturalSortQstringComparator = [](const QString& l, const QStr
 };
 
 CAutoUpdaterGithub::CAutoUpdaterGithub(const QString& githubRepositoryAddress, const QString& currentVersionString, const std::function<bool (const QString&, const QString&)>& versionStringComparatorLessThan) :
-	_updatePageAddress(githubRepositoryAddress + "/releases/"),
+    _updatePageAddress(githubRepositoryAddress),
 	_currentVersionString(currentVersionString),
 	_lessThanVersionStringComparator(versionStringComparatorLessThan ? versionStringComparatorLessThan : naturalSortQstringComparator)
 {
-	assert(githubRepositoryAddress.contains("https://github.com/"));
+    assert(githubRepositoryAddress.contains("https://api.github.com/repos/"));
 	assert(!currentVersionString.isEmpty());
 }
 
@@ -36,7 +36,10 @@ void CAutoUpdaterGithub::setUpdateStatusListener(UpdateStatusListener* listener)
 
 void CAutoUpdaterGithub::checkForUpdates()
 {
-	QNetworkReply * reply = _networkManager.get(QNetworkRequest(QUrl(_updatePageAddress)));
+    QNetworkRequest request;
+    request.setUrl(QUrl(_updatePageAddress));
+    request.setRawHeader("Accept", "application/vnd.github+json");
+    QNetworkReply * reply = _networkManager.get(request);
 	if (!reply)
 	{
 		if (_listener)
@@ -76,33 +79,6 @@ void CAutoUpdaterGithub::downloadAndInstallUpdate(const QString& updateUrl)
 	connect(reply, &QNetworkReply::finished, this, &CAutoUpdaterGithub::updateDownloaded, Qt::UniqueConnection);
 }
 
-static QString match(const QString& pattern, const QString& text, int from, int& end)
-{
-	end = -1;
-
-	const auto delimiters = pattern.split('*');
-	if (delimiters.size() != 2)
-	{
-		Q_ASSERT_X(delimiters.size() != 2, __FUNCTION__, "Invalid pattern");
-		return {};
-	}
-
-	const int leftDelimiterStart = text.indexOf(delimiters[0], from);
-	if (leftDelimiterStart < 0)
-		return {};
-
-	const int rightDelimiterStart = text.indexOf(delimiters[1], leftDelimiterStart + delimiters[0].length());
-	if (rightDelimiterStart < 0)
-		return {};
-
-	const int resultLength = rightDelimiterStart - leftDelimiterStart - delimiters[0].length();
-	if (resultLength <= 0)
-		return {};
-
-	end = rightDelimiterStart + delimiters[1].length();
-	return text.mid(leftDelimiterStart + delimiters[0].length(), resultLength);
-}
-
 void CAutoUpdaterGithub::updateCheckRequestFinished()
 {
 	auto reply = qobject_cast<QNetworkReply *>(sender());
@@ -127,19 +103,16 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 	}
 
 	ChangeLog changelog;
-    	const QString changelogPattern = QStringLiteral("markdown-body my-3\">*</div>");
-    	const QString versionPattern = QStringLiteral("/releases/tag/*\"");
-	const QString releaseUrlPattern = QStringLiteral("<a href=\"*\"");
+    const auto releases = QString(reply->readAll());
+    const QJsonDocument jsonDocument = QJsonDocument::fromJson(releases.toUtf8());
+    const QJsonObject json = jsonDocument.object();
 
-	const auto releases = QString(reply->readAll()).split("release-card");
 	// Skipping the 0 item because anything before the first "release-header" is not a release
 	for (int releaseIndex = 1, numItems = releases.size(); releaseIndex < numItems; ++releaseIndex)
 	{
-		const QString& releaseText = releases[releaseIndex];
-
-		int offset = 0;
-		QString updateVersion = match(versionPattern, releaseText, offset, offset);
-		QString urlToUpdatePage = _updatePageAddress + "tag/" + updateVersion;
+        QString updateVersion = json["tag_name"].toString();
+        QString url = json["assets"][0]["browser_download_url"].toString();
+        QString releaseUrl = json["html_url"].toString(); // Fallback incase there is no download link available
 			
 		if (updateVersion.startsWith(QStringLiteral(".v")))
 			updateVersion.remove(0, 2);
@@ -149,22 +122,9 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 		if (!naturalSortQstringComparator(_currentVersionString, updateVersion))
 			continue; // version <= _currentVersionString, skipping
 
-		const QString updateChanges = match(changelogPattern, releaseText, offset, offset);
+        const QString updateChanges = json["body"].toString();
 
-		QString url;
-		offset = 0; // Gotta start scanning from the beginning again, since the release URL could be before the release description
-		while (offset != -1)
-		{
-			const QString newUrl = match(releaseUrlPattern, releaseText, offset, offset);
-			if (newUrl.endsWith(UPDATE_FILE_EXTENSION))
-			{
-				Q_ASSERT_X(url.isEmpty(), __FUNCTION__,"More than one suitable update URL found");
-				url = newUrl;
-			}
-		}
-
-		// GitHub seems to dynamically add assets, which don't show up in the html, so we provide a link to the release page instead
-		changelog.push_back({ updateVersion, updateChanges, !url.isEmpty() ? "https://github.com" + url : urlToUpdatePage });
+        changelog.push_back({ updateVersion, updateChanges, !url.isEmpty() ? url : releaseUrl });
 	}
 
 	if (_listener)

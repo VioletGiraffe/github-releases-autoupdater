@@ -3,8 +3,8 @@ Currently, the library is intended for downloading and launching a Windows insta
 
 # Usage
 
-1. Create an instance of the updater class. Specify your GitHub repository address and a string representation of the current version of the software (could be any format, just make sure it's consistent with your GitHub version tags):
-  `_updater("https://github.com/VioletGiraffe/file-commander", "0.9.1")`
+1. Create an instance of the updater class. Specify your repository's latest-releases GitHub API address and a string representation of the current version of the software (could be any format, just make sure it's consistent with your GitHub version tags):
+  `_updater("https://api.github.com/repos/VioletGiraffe/file-commander/releases/latest", "0.9.1")`
 2. Specify the class that will receive update notification (via the `CAutoUpdaterGithub::UpdateStatusListener` interface):
   `_updater.setUpdateStatusListener(this);`
 3. Call `checkForUpdates()`
