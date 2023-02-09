@@ -10,6 +10,7 @@ DISABLE_COMPILER_WARNINGS
 RESTORE_COMPILER_WARNINGS
 
 #include <assert.h>
+#include <utility>
 
 static const auto naturalSortQstringComparator = [](const QString& l, const QString& r) {
 	static QCollator collator;
@@ -20,13 +21,13 @@ static const auto naturalSortQstringComparator = [](const QString& l, const QStr
 	return collator.compare(qToStringViewIgnoringNull(l), qToStringViewIgnoringNull(r)) < 0;
 };
 
-CAutoUpdaterGithub::CAutoUpdaterGithub(const QString& githubRepositoryAddress, const QString& currentVersionString, const std::function<bool (const QString&, const QString&)>& versionStringComparatorLessThan) :
-    _updatePageAddress(githubRepositoryAddress),
-	_currentVersionString(currentVersionString),
+CAutoUpdaterGithub::CAutoUpdaterGithub(QString githubRepositoryName, QString currentVersionString, const std::function<bool (const QString&, const QString&)>& versionStringComparatorLessThan) :
+	_repoName(std::move(githubRepositoryName)),
+	_currentVersionString(std::move(currentVersionString)),
 	_lessThanVersionStringComparator(versionStringComparatorLessThan ? versionStringComparatorLessThan : naturalSortQstringComparator)
 {
-    assert(githubRepositoryAddress.contains("https://api.github.com/repos/"));
-	assert(!currentVersionString.isEmpty());
+	assert(_repoName.count(QChar('/')) == 1);
+	assert(!_currentVersionString.isEmpty());
 }
 
 void CAutoUpdaterGithub::setUpdateStatusListener(UpdateStatusListener* listener)
@@ -37,7 +38,7 @@ void CAutoUpdaterGithub::setUpdateStatusListener(UpdateStatusListener* listener)
 void CAutoUpdaterGithub::checkForUpdates()
 {
     QNetworkRequest request;
-    request.setUrl(QUrl(_updatePageAddress));
+	request.setUrl(QUrl("https://api.github.com/repos/" + _repoName));
     request.setRawHeader("Accept", "application/vnd.github+json");
     QNetworkReply * reply = _networkManager.get(request);
 	if (!reply)

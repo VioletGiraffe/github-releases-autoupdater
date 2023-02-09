@@ -10,11 +10,11 @@ DISABLE_COMPILER_WARNINGS
 #include <QStringBuilder>
 RESTORE_COMPILER_WARNINGS
 
-CUpdaterDialog::CUpdaterDialog(QWidget *parent, const QString& githubRepoAddress, const QString& versionString, bool silentCheck) :
+CUpdaterDialog::CUpdaterDialog(QWidget *parent, const QString& githubRepoName, const QString& versionString, bool silentCheck) :
 	QDialog(parent),
 	ui(new Ui::CUpdaterDialog),
 	_silent(silentCheck),
-	_updater(githubRepoAddress, versionString)
+	_updater(githubRepoName, versionString)
 {
 	ui->setupUi(this);
 

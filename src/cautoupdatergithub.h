@@ -43,9 +43,9 @@ public:
 
 public:
 	// If the string comparison functior is not supplied, case-insensitive natural sorting is used (using QCollator)
-	CAutoUpdaterGithub(const QString& githubRepositoryAddress,
-					   const QString& currentVersionString,
-					   const std::function<bool (const QString&, const QString&)>& versionStringComparatorLessThan = std::function<bool (const QString&, const QString&)>());
+	CAutoUpdaterGithub(QString githubRepositoryName, // Name of the repo, e. g. VioletGiraffe/github-releases-autoupdater
+					   QString currentVersionString,
+					   const std::function<bool (const QString&, const QString&)>& versionStringComparatorLessThan = {});
 
 	CAutoUpdaterGithub& operator=(const CAutoUpdaterGithub& other) = delete;
 
@@ -62,7 +62,7 @@ private:
 
 private:
 	QFile _downloadedBinaryFile;
-	const QString _updatePageAddress;
+	const QString _repoName;
 	const QString _currentVersionString;
 	const std::function<bool (const QString&, const QString&)> _lessThanVersionStringComparator;
 

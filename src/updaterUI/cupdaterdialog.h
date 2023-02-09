@@ -15,7 +15,10 @@ class CAutoUpdaterGithub;
 class CUpdaterDialog final : public QDialog, private CAutoUpdaterGithub::UpdateStatusListener
 {
 public:
-	explicit CUpdaterDialog(QWidget *parent, const QString& githubRepoAddress, const QString& versionString, bool silentCheck = false);
+	explicit CUpdaterDialog(QWidget *parent,
+							const QString& githubRepoName, // Name of the repo, e. g. VioletGiraffe/github-releases-autoupdater
+							const QString& versionString,
+							bool silentCheck = false);
 	~CUpdaterDialog() override;
 
 private:
