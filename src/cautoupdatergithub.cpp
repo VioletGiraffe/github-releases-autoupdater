@@ -37,10 +37,10 @@ void CAutoUpdaterGithub::setUpdateStatusListener(UpdateStatusListener* listener)
 
 void CAutoUpdaterGithub::checkForUpdates()
 {
-    QNetworkRequest request;
+	QNetworkRequest request;
 	request.setUrl(QUrl("https://api.github.com/repos/" + _repoName));
-    request.setRawHeader("Accept", "application/vnd.github+json");
-    QNetworkReply * reply = _networkManager.get(request);
+	request.setRawHeader("Accept", "application/vnd.github+json");
+	QNetworkReply * reply = _networkManager.get(request);
 	if (!reply)
 	{
 		if (_listener)
@@ -104,17 +104,17 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 	}
 
 	ChangeLog changelog;
-    const auto releases = QString(reply->readAll());
-    const QJsonDocument jsonDocument = QJsonDocument::fromJson(releases.toUtf8());
-    const QJsonObject json = jsonDocument.object();
+	const auto releases = QString(reply->readAll());
+	const QJsonDocument jsonDocument = QJsonDocument::fromJson(releases.toUtf8());
+	const QJsonObject json = jsonDocument.object();
 
 	// Skipping the 0 item because anything before the first "release-header" is not a release
-	for (int releaseIndex = 1, numItems = releases.size(); releaseIndex < numItems; ++releaseIndex)
+	for (qsizetype releaseIndex = 1, numItems = releases.size(); releaseIndex < numItems; ++releaseIndex)
 	{
-        QString updateVersion = json["tag_name"].toString();
-        QString url = json["assets"][0]["browser_download_url"].toString();
-        QString releaseUrl = json["html_url"].toString(); // Fallback incase there is no download link available
-			
+		QString updateVersion = json["tag_name"].toString();
+		QString url = json["assets"][0]["browser_download_url"].toString();
+		QString releaseUrl = json["html_url"].toString(); // Fallback incase there is no download link available
+
 		if (updateVersion.startsWith(QStringLiteral(".v")))
 			updateVersion.remove(0, 2);
 		else if (updateVersion.startsWith('v'))
@@ -123,9 +123,9 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 		if (!naturalSortQstringComparator(_currentVersionString, updateVersion))
 			continue; // version <= _currentVersionString, skipping
 
-        const QString updateChanges = json["body"].toString();
+		const QString updateChanges = json["body"].toString();
 
-        changelog.push_back({ updateVersion, updateChanges, !url.isEmpty() ? url : releaseUrl });
+		changelog.push_back({ updateVersion, updateChanges, !url.isEmpty() ? url : releaseUrl });
 	}
 
 	if (_listener)
@@ -160,7 +160,7 @@ void CAutoUpdaterGithub::updateDownloaded()
 void CAutoUpdaterGithub::onDownloadProgress(qint64 bytesReceived, qint64 bytesTotal)
 {
 	if (_listener)
-		_listener->onUpdateDownloadProgress(bytesReceived < bytesTotal ? bytesReceived * 100 / (float)bytesTotal : 100.0f);
+		_listener->onUpdateDownloadProgress(bytesReceived < bytesTotal ? static_cast<float>(bytesReceived * 100) / static_cast<float>(bytesTotal) : 100.0f);
 }
 
 void CAutoUpdaterGithub::onNewDataDownloaded()
