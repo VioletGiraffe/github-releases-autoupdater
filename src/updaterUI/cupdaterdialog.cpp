@@ -69,7 +69,7 @@ void CUpdaterDialog::applyUpdate()
 }
 
 // If no updates are found, the changelog is empty
-void CUpdaterDialog::onUpdateAvailable(CAutoUpdaterGithub::ChangeLog changelog)
+void CUpdaterDialog::onUpdateAvailable(const CAutoUpdaterGithub::ChangeLog& changelog)
 {
 	if (!changelog.empty())
 	{
@@ -100,7 +100,7 @@ void CUpdaterDialog::onUpdateDownloadFinished()
 	accept();
 }
 
-void CUpdaterDialog::onUpdateError(QString errorMessage)
+void CUpdaterDialog::onUpdateError(const QString& errorMessage)
 {
 	reject();
 	if (!_silent)

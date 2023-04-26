@@ -24,6 +24,8 @@ RESTORE_COMPILER_WARNINGS
 class CAutoUpdaterGithub final : public QObject
 {
 public:
+	using QObject::QObject;
+
 	struct VersionEntry {
 		QString versionString;
 		QString versionChanges;
@@ -35,10 +37,10 @@ public:
 	struct UpdateStatusListener {
 		virtual ~UpdateStatusListener() = default;
 		// If no updates are found, the changelog is empty
-		virtual void onUpdateAvailable(ChangeLog changelog) = 0;
+		virtual void onUpdateAvailable(const ChangeLog& changelog) = 0;
 		virtual void onUpdateDownloadProgress(float percentageDownloaded) = 0;
 		virtual void onUpdateDownloadFinished() = 0;
-		virtual void onUpdateError(QString errorMessage) = 0;
+		virtual void onUpdateError(const QString& errorMessage) = 0;
 	};
 
 public:
