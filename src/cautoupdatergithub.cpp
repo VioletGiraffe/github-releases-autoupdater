@@ -82,7 +82,7 @@ void CAutoUpdaterGithub::downloadAndInstallUpdate(const QString& updateUrl)
 
 void CAutoUpdaterGithub::updateCheckRequestFinished()
 {
-	auto reply = qobject_cast<QNetworkReply *>(sender());
+	auto* reply = qobject_cast<QNetworkReply *>(sender());
 	if (!reply)
 		return;
 
@@ -136,7 +136,7 @@ void CAutoUpdaterGithub::updateDownloaded()
 {
 	_downloadedBinaryFile.close();
 
-	auto reply = qobject_cast<QNetworkReply *>(sender());
+	auto* reply = qobject_cast<QNetworkReply *>(sender());
 	if (!reply)
 		return;
 
@@ -165,7 +165,7 @@ void CAutoUpdaterGithub::onDownloadProgress(qint64 bytesReceived, qint64 bytesTo
 
 void CAutoUpdaterGithub::onNewDataDownloaded()
 {
-	auto reply = qobject_cast<QNetworkReply*>(sender());
+	auto* reply = qobject_cast<QNetworkReply*>(sender());
 	if (!reply)
 		return;
 

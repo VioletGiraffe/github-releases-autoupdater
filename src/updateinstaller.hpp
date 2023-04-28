@@ -6,4 +6,4 @@ namespace UpdateInstaller {
 
 bool install(const QString& downloadedUpdateFilePath);
 
-}
+} // namespace UpdateInstaller
