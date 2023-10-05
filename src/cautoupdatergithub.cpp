@@ -5,6 +5,9 @@ DISABLE_COMPILER_WARNINGS
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDir>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 RESTORE_COMPILER_WARNINGS
@@ -38,7 +41,7 @@ void CAutoUpdaterGithub::setUpdateStatusListener(UpdateStatusListener* listener)
 void CAutoUpdaterGithub::checkForUpdates()
 {
 	QNetworkRequest request;
-	request.setUrl(QUrl("https://api.github.com/repos/" + _repoName));
+	request.setUrl(QUrl("https://api.github.com/repos/" + _repoName + "/releases"));
 	request.setRawHeader("Accept", "application/vnd.github+json");
 	QNetworkReply * reply = _networkManager.get(request);
 	if (!reply)
@@ -104,16 +107,13 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 	}
 
 	ChangeLog changelog;
-	const auto releases = QString(reply->readAll());
-	const QJsonDocument jsonDocument = QJsonDocument::fromJson(releases.toUtf8());
-	const QJsonObject json = jsonDocument.object();
+	const QJsonDocument jsonDocument = QJsonDocument::fromJson(reply->readAll());
+	assert(jsonDocument.isArray());
 
-	// Skipping the 0 item because anything before the first "release-header" is not a release
-	for (qsizetype releaseIndex = 1, numItems = releases.size(); releaseIndex < numItems; ++releaseIndex)
+	for (const auto& item: jsonDocument.array())
 	{
-		QString updateVersion = json["tag_name"].toString();
-		QString url = json["assets"][0]["browser_download_url"].toString();
-		QString releaseUrl = json["html_url"].toString(); // Fallback incase there is no download link available
+		const auto release = item.toObject();
+		QString updateVersion = release["tag_name"].toString();
 
 		if (updateVersion.startsWith(QStringLiteral(".v")))
 			updateVersion.remove(0, 2);
@@ -123,9 +123,33 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 		if (!naturalSortQstringComparator(_currentVersionString, updateVersion))
 			continue; // version <= _currentVersionString, skipping
 
-		const QString updateChanges = json["body"].toString();
+#ifdef _WIN32
+		static constexpr auto targetExtension = ".exe";
+#elif defined __APPLE__
+		static constexpr auto targetExtension = ".dmg";
+#elif defined __linux__
+		static constexpr auto targetExtension = ".AppImage";
+#else
+		static constexpr auto targetExtension = ".unknown";
+#endif
 
-		changelog.push_back({ updateVersion, updateChanges, !url.isEmpty() ? url : releaseUrl });
+		// Find the appropriate release URL for our platform
+		QString url; // [0]["browser_download_url"].toString()
+		for (const auto& releaseAsset : release["assets"].toArray())
+		{
+			const QString assetUrl = releaseAsset.toObject()["browser_download_url"].toString();
+			if (assetUrl.endsWith(targetExtension))
+			{
+				url = assetUrl;
+				break;
+			}
+		}
+
+		if (url.isEmpty())
+			url = release["html_url"].toString(); // Fallback in case there is no download link available
+
+		const QString updateChanges = release["body"].toString();
+		changelog.push_back({ updateVersion, updateChanges, url });
 	}
 
 	if (_listener)

@@ -6,8 +6,6 @@ DISABLE_COMPILER_WARNINGS
 #include <QFile>
 #include <QNetworkAccessManager>
 #include <QString>
-#include <QJsonDocument>
-#include <QJsonObject>
 RESTORE_COMPILER_WARNINGS
 
 #include <functional>
