@@ -27,6 +27,7 @@ public:
 	struct VersionEntry {
 		QString versionString;
 		QString versionChanges;
+		QString date;
 		QString versionUpdateUrl;
 	};
 

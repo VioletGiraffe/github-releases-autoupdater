@@ -10,6 +10,8 @@ DISABLE_COMPILER_WARNINGS
 #include <QJsonObject>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+
+#include "maddy/parser.h"
 RESTORE_COMPILER_WARNINGS
 
 #include <assert.h>
@@ -106,9 +108,11 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 		return;
 	}
 
-	ChangeLog changelog;
 	const QJsonDocument jsonDocument = QJsonDocument::fromJson(reply->readAll());
+	qInfo() << QString::fromUtf8(jsonDocument.toJson()).remove('\r').replace("\\n", "\n");
 	assert(jsonDocument.isArray());
+
+	ChangeLog changelog;
 
 	for (const auto& item: jsonDocument.array())
 	{
@@ -148,8 +152,15 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 		if (url.isEmpty())
 			url = release["html_url"].toString(); // Fallback in case there is no download link available
 
-		const QString updateChanges = release["body"].toString();
-		changelog.push_back({ updateVersion, updateChanges, url });
+		const QString updateChanges = release["body"].toString().remove('\r');
+		maddy::Parser markdownParser;
+		std::istringstream istream{ updateChanges.toStdString() };
+		std::string htmlChanges = markdownParser.Parse(istream);
+
+		QString dateString = release["created_at"].toString();
+		dateString = QDateTime::fromString(dateString, Qt::DateFormat::ISODate).toString("dd MMM yyyy");
+
+		changelog.push_back({ updateVersion, QString::fromStdString(htmlChanges), dateString, url });
 	}
 
 	if (_listener)

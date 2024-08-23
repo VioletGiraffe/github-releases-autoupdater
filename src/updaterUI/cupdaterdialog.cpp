@@ -73,10 +73,21 @@ void CUpdaterDialog::onUpdateAvailable(const CAutoUpdaterGithub::ChangeLog& chan
 {
 	if (!changelog.empty())
 	{
-		ui->stackedWidget->setCurrentIndex(1);
-		for (const auto& changelogItem: changelog)
-			ui->changeLogViewer->append("<b>" % changelogItem.versionString % "</b>" % '\n' % changelogItem.versionChanges % "<p></p>");
+		static constexpr auto annotateEmptyDescription = [](const QString& desc) -> QString {
+			return !desc.isEmpty() ? desc : "<br><i>Release doesn't provide a description</i><br>";
+		};
 
+		QString html;
+		ui->stackedWidget->setCurrentIndex(1);
+		for (const auto& changelogItem : changelog)
+		{
+			html.append(
+				"<b>" % changelogItem.versionString % "</b> (" % changelogItem.date % ")" % annotateEmptyDescription(changelogItem.versionChanges) % "<br>"
+			);
+		}
+
+
+		ui->changeLogViewer->setHtml(html);
 		_latestUpdateUrl = changelog.front().versionUpdateUrl;
 		show();
 	}
