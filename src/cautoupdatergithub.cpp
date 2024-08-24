@@ -117,6 +117,9 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 	for (const auto& item: jsonDocument.array())
 	{
 		const auto release = item.toObject();
+		if (release["draft"].toBool())
+			continue;
+
 		QString updateVersion = release["tag_name"].toString();
 
 		if (updateVersion.startsWith(QStringLiteral(".v")))
@@ -160,7 +163,8 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 		QString dateString = release["created_at"].toString();
 		dateString = QDateTime::fromString(dateString, Qt::DateFormat::ISODate).toString("dd MMM yyyy");
 
-		changelog.push_back({ updateVersion, QString::fromStdString(htmlChanges), dateString, url });
+		const bool prerelease = release["prerelease"].toBool();
+		changelog.push_back({ updateVersion, QString::fromStdString(htmlChanges), dateString, url, prerelease });
 	}
 
 	if (_listener)

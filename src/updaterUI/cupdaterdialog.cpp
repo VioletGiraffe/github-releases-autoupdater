@@ -77,12 +77,20 @@ void CUpdaterDialog::onUpdateAvailable(const CAutoUpdaterGithub::ChangeLog& chan
 			return !desc.isEmpty() ? desc : "<br><i>Release doesn't provide a description</i><br>";
 		};
 
+		static constexpr auto versionTitleHtml = [](const CAutoUpdaterGithub::VersionEntry& release) -> QString {
+			QString html = "<b>" % release.versionString % "</b>";
+			if (release.isPrerelease)
+				html += " [Pre-release]";
+
+			return html;
+		};
+
 		QString html;
 		ui->stackedWidget->setCurrentIndex(1);
 		for (const auto& changelogItem : changelog)
 		{
 			html.append(
-				"<b>" % changelogItem.versionString % "</b> (" % changelogItem.date % ")" % annotateEmptyDescription(changelogItem.versionChanges) % "<br>"
+				versionTitleHtml(changelogItem) % " (" % changelogItem.date % ")" % annotateEmptyDescription(changelogItem.versionChanges) % "<br>"
 			);
 		}
 
