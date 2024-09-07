@@ -3,7 +3,6 @@
 DISABLE_COMPILER_WARNINGS
 #include "ui_cupdaterdialog.h"
 
-#include <QDebug>
 #include <QDesktopServices>
 #include <QMessageBox>
 #include <QPushButton>

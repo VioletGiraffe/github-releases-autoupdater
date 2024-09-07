@@ -109,7 +109,6 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 	}
 
 	const QJsonDocument jsonDocument = QJsonDocument::fromJson(reply->readAll());
-	qInfo() << QString::fromUtf8(jsonDocument.toJson()).remove('\r').replace("\\n", "\n");
 	assert(jsonDocument.isArray());
 
 	ChangeLog changelog;
