@@ -41,10 +41,25 @@ public:
   void
   Parse(std::string& line) override
   {
-    static std::regex re(R"((?!.*`.*|.*<code>.*)_(?!.*`.*|.*<\/code>.*)([^_]*)_(?!.*`.*|.*<\/code>.*))");
-    static std::string replacement = "<em>$1</em>";
+      std::string pattern = "_";
+      std::string newPattern = "em";
 
-    line = std::regex_replace(line, re, replacement);
+      for (;;) {
+          size_t patlen = pattern.size();
+
+          auto pos1 = line.find(pattern);
+          if (pos1 == std::string::npos) {
+              break;
+          }
+
+          auto pos2 = line.find(pattern, pos1 + patlen);
+          if (pos2 == std::string::npos) {
+              break;
+          }
+
+          std::string word = line.substr(pos1 + patlen, pos2 - pos1 - patlen);
+          line = line.replace(pos1, (patlen + pos2) - pos1, "<" + newPattern + ">" + word + "</" + newPattern + ">");
+      }
   }
 }; // class EmphasizedParser
 
