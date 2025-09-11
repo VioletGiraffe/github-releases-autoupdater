@@ -5,7 +5,7 @@ CONFIG += staticlib
 QT = core network
 !updater_without_widgets:QT += widgets gui
 
-CONFIG += strict_c++ c++latest
+CONFIG += strict_c++ c++2b
 
 mac* | linux* | freebsd{
 	CONFIG(release, debug|release):CONFIG *= Release optimize_full
