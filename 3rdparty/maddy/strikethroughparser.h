@@ -6,8 +6,8 @@
 
 // -----------------------------------------------------------------------------
 
-#include <string>
 #include <regex>
+#include <string>
 
 #include "maddy/lineparser.h"
 
@@ -36,28 +36,14 @@ public:
    * @param {std::string&} line The line to interpret
    * @return {void}
    */
-  void
-  Parse(std::string& line) override
+  void Parse(std::string& line) override
   {
-    std::string pattern = "~~";
-      std::string newPattern = "s";
+    static std::regex re(
+      R"((?!.*`.*|.*<code>.*)\~\~(?!.*`.*|.*<\/code>.*)([^\~]*)\~\~(?!.*`.*|.*<\/code>.*))"
+    );
+    static std::string replacement = "<s>$1</s>";
 
-      for (;;) {
-          size_t patlen = pattern.size();
-
-          auto pos1 = line.find(pattern);
-          if (pos1 == std::string::npos) {
-              break;
-          }
-
-          auto pos2 = line.find(pattern, pos1 + patlen);
-          if (pos2 == std::string::npos) {
-              break;
-          }
-
-          std::string word = line.substr(pos1 + patlen, pos2 - pos1 - patlen);
-          line = line.replace(pos1, (patlen + pos2) - pos1, "<" + newPattern + ">" + word + "</" + newPattern + ">");
-      }
+    line = std::regex_replace(line, re, replacement);
   }
 }; // class StrikeThroughParser
 

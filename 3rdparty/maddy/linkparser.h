@@ -6,8 +6,8 @@
 
 // -----------------------------------------------------------------------------
 
-#include <string>
 #include <regex>
+#include <string>
 
 #include "maddy/lineparser.h"
 
@@ -38,13 +38,19 @@ public:
    * @param {std::string&} line The line to interpret
    * @return {void}
    */
-  void
-  Parse(std::string& line) override
+  void Parse(std::string& line) override
   {
-    static std::regex re(R"(\[([^\]]*)\]\(([^\]]*)\))");
-    static std::string replacement = "<a href=\"$2\">$1</a>";
-
+    // Match [name](http:://link "title text")
+    // NOTE:  the 'no quote' bit at the beginning (^") is a hack for now:
+    // there should eventually be something that replaces it with '%22'.
+    static std::regex re(R"(\[([^\]]*)\]\( *([^)^ ^"]*) *\"([^\"]*)\" *\))");
+    static std::string replacement = "<a href=\"$2\" title=\"$3\">$1</a>";
     line = std::regex_replace(line, re, replacement);
+
+    // Match [name](http:://link)
+    static std::regex re2(R"(\[([^\]]*)\]\( *([^)^ ^"]*) *\))");
+    static std::string replacement2 = "<a href=\"$2\">$1</a>";
+    line = std::regex_replace(line, re2, replacement2);
   }
 }; // class LinkParser
 
