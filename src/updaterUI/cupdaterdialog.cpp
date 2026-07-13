@@ -77,7 +77,11 @@ void CUpdaterDialog::onUpdateAvailable(const CAutoUpdaterGithub::ChangeLog& chan
 		};
 
 		static constexpr auto versionTitleHtml = [](const CAutoUpdaterGithub::VersionEntry& release) -> QString {
-			QString html = "<b>" % release.versionString % "</b>";
+			const QString title = !release.releaseTitle.isEmpty() ? release.releaseTitle : release.versionString;
+			QString html = "<b>" % title.toHtmlEscaped() % "</b>";
+			if (!release.releaseTitle.isEmpty() && release.releaseTitle != release.versionString)
+				html += " (tag: " % release.versionString.toHtmlEscaped() % ")";
+
 			if (release.isPrerelease)
 				html += " [Pre-release]";
 

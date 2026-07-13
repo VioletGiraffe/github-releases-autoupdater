@@ -163,7 +163,7 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 		dateString = QDateTime::fromString(dateString, Qt::DateFormat::ISODate).toString("dd MMM yyyy");
 
 		const bool prerelease = release["prerelease"].toBool();
-		changelog.push_back({ updateVersion, QString::fromStdString(htmlChanges), dateString, url, prerelease });
+		changelog.push_back({ updateVersion, QString::fromStdString(htmlChanges), dateString, url, prerelease, release["name"].toString() });
 	}
 
 	if (_listener)

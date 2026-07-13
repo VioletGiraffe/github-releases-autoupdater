@@ -30,6 +30,7 @@ public:
 		QString date;
 		QString versionUpdateUrl;
 		bool isPrerelease = false;
+		QString releaseTitle;
 	};
 
 	using ChangeLog = std::vector<VersionEntry>;
