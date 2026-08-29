@@ -17,14 +17,8 @@ mac* | linux* | freebsd{
 	CONFIG(debug, debug|release):CONFIG *= Debug
 }
 
-contains(QT_ARCH, x86_64) {
-	ARCHITECTURE = x64
-} else {
-	ARCHITECTURE = x86
-}
-
-Release:OUTPUT_DIR=release/$${ARCHITECTURE}
-Debug:OUTPUT_DIR=debug/$${ARCHITECTURE}
+Release:OUTPUT_DIR=release
+Debug:OUTPUT_DIR=debug
 
 DESTDIR     = ../bin/$${OUTPUT_DIR}
 OBJECTS_DIR = ../build/$${OUTPUT_DIR}/$${TARGET}
