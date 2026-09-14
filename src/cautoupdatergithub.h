@@ -15,8 +15,10 @@ RESTORE_COMPILER_WARNINGS
 #define UPDATE_FILE_EXTENSION QLatin1String(".exe")
 #elif defined __APPLE__
 #define UPDATE_FILE_EXTENSION QLatin1String(".dmg")
-#else
+#elif defined __linux__
 #define UPDATE_FILE_EXTENSION QLatin1String(".AppImage")
+#else
+#define UPDATE_FILE_EXTENSION QLatin1String(".unknown")
 #endif
 
 class CAutoUpdaterGithub final : public QObject
@@ -39,7 +41,8 @@ public:
 		virtual ~UpdateStatusListener() = default;
 		// If no updates are found, the changelog is empty
 		virtual void onUpdateAvailable(const ChangeLog& changelog) = 0;
-		virtual void onUpdateDownloadProgress(float percentageDownloaded) = 0;
+		// bytesTotal is -1 when the size is unknown
+		virtual void onUpdateDownloadProgress(qint64 bytesReceived, qint64 bytesTotal) = 0;
 		virtual void onUpdateDownloadFinished() = 0;
 		virtual void onUpdateError(const QString& errorMessage) = 0;
 	};

@@ -8,6 +8,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonParseError>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 
@@ -108,8 +109,14 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 		return;
 	}
 
-	const QJsonDocument jsonDocument = QJsonDocument::fromJson(reply->readAll());
-	assert(jsonDocument.isArray());
+	QJsonParseError parseError;
+	const QJsonDocument jsonDocument = QJsonDocument::fromJson(reply->readAll(), &parseError);
+	if (!jsonDocument.isArray())
+	{
+		if (_listener)
+			_listener->onUpdateError(parseError.error != QJsonParseError::NoError ? parseError.errorString() : "Unexpected response from GitHub.");
+		return;
+	}
 
 	ChangeLog changelog;
 
@@ -126,25 +133,15 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 		else if (updateVersion.startsWith('v'))
 			updateVersion.remove(0, 1);
 
-		if (!naturalSortQstringComparator(_currentVersionString, updateVersion))
+		if (!_lessThanVersionStringComparator(_currentVersionString, updateVersion))
 			continue; // version <= _currentVersionString, skipping
 
-#ifdef _WIN32
-		static constexpr auto targetExtension = ".exe";
-#elif defined __APPLE__
-		static constexpr auto targetExtension = ".dmg";
-#elif defined __linux__
-		static constexpr auto targetExtension = ".AppImage";
-#else
-		static constexpr auto targetExtension = ".unknown";
-#endif
-
 		// Find the appropriate release URL for our platform
-		QString url; // [0]["browser_download_url"].toString()
+		QString url;
 		for (const QJsonArray assets = release["assets"].toArray(); const auto releaseAsset : assets)
 		{
 			const QString assetUrl = releaseAsset.toObject().value("browser_download_url").toString();
-			if (assetUrl.endsWith(targetExtension))
+			if (assetUrl.endsWith(UPDATE_FILE_EXTENSION))
 			{
 				url = assetUrl;
 				break;
@@ -198,7 +195,7 @@ void CAutoUpdaterGithub::updateDownloaded()
 void CAutoUpdaterGithub::onDownloadProgress(qint64 bytesReceived, qint64 bytesTotal)
 {
 	if (_listener)
-		_listener->onUpdateDownloadProgress(bytesReceived < bytesTotal ? static_cast<float>(bytesReceived * 100) / static_cast<float>(bytesTotal) : 100.0f);
+		_listener->onUpdateDownloadProgress(bytesReceived, bytesTotal);
 }
 
 void CAutoUpdaterGithub::onNewDataDownloaded()

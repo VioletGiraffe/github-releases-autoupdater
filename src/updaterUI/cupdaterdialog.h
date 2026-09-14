@@ -27,14 +27,14 @@ private:
 private:
 	// If no updates are found, the changelog is empty
 	void onUpdateAvailable(const CAutoUpdaterGithub::ChangeLog& changelog) override;
-	// percentageDownloaded >= 100.0f means the download has finished
-	void onUpdateDownloadProgress(float percentageDownloaded) override;
+	void onUpdateDownloadProgress(qint64 bytesReceived, qint64 bytesTotal) override;
 	void onUpdateDownloadFinished() override;
 	void onUpdateError(const QString& errorMessage) override;
 
 private:
 	Ui::CUpdaterDialog *ui;
 	const bool _silent;
+	bool _updateDownloadStarted = false;
 
 	QString _latestUpdateUrl;
 	CAutoUpdaterGithub _updater;

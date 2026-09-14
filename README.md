@@ -1,20 +1,35 @@
-A C++ / Qt library for update checking and downloading the updates for the software distributed via GitHub releases.
-Currently, the library is intended for downloading and launching a Windows installer (that will take care of the actual updating). If you want to extend it to support OS X / Linux / whatever - be my guest.
+A C++ / Qt library that checks GitHub releases for updates, then downloads and launches the update.
+Automatic installation is only implemented on Windows, where the downloaded `.exe` is launched as the installer. On other platforms the update check and download link work, installation is left to the user. If you want to extend it to other platforms - be my guest.
 
 # Usage
 
-1. Create an instance of the updater class. Specify your repository's latest-releases GitHub API address and a string representation of the current version of the software (could be any format, just make sure it's consistent with your GitHub version tags):
-  `_updater("https://api.github.com/repos/VioletGiraffe/file-commander/releases/latest", "0.9.1")`
-2. Specify the class that will receive update notification (via the `CAutoUpdaterGithub::UpdateStatusListener` interface):
-  `_updater.setUpdateStatusListener(this);`
-3. Call `checkForUpdates()`
-4. The `onUpdateAvailable(CAutoUpdaterGithub::ChangeLog changelog)` callback will be called asynchronously (in the same thread that requested the check). If any updates were found, the `changelog` vector will be non-empty. You can use its items to retrieve the update details. If it's empty, it means no updates are available.
-5. Call `downloadAndInstallUpdate()` to download the update and launch it.
+1. Construct `CAutoUpdaterGithub` with the repository name and the current version string:
+  `CAutoUpdaterGithub updater{"VioletGiraffe/github-releases-autoupdater", "0.9.1"};`
+  The optional third argument is a less-than comparator for version strings. The default is case-insensitive natural sorting.
+2. Pass your `CAutoUpdaterGithub::UpdateStatusListener` implementation to `setUpdateStatusListener()`.
+3. Call `checkForUpdates()`. `onUpdateAvailable()` is called asynchronously with every release newer than the current version, in GitHub's order (newest first). The changelog is empty when no update is available.
+4. Call `downloadAndInstallUpdate()` with a changelog entry's `versionUpdateUrl`. The listener receives `onUpdateDownloadProgress()` during the download and `onUpdateDownloadFinished()` before the installer is launched.
+
+`onUpdateError()` reports a failure of any step.
+
+## Releases
+
+* Draft releases are skipped.
+* A leading `v` or `.v` is removed from the tag name before comparing versions.
+* `versionUpdateUrl` is the first release asset ending in the platform's extension (`.exe`, `.dmg`, `.AppImage`), or the release page if there is none.
+* The release description is converted from Markdown to HTML.
+
+## Ready-made dialog
+
+`CUpdaterDialog` implements all of the above: `new CUpdaterDialog(parent, "owner/repo", currentVersion, silentCheck)`.
+With `silentCheck`, the dialog stays hidden and shows no errors unless an update is found.
+Add `CONFIG += updater_without_widgets` to leave the dialog out and drop the Qt Widgets dependency.
 
 # Building
 
 Prerequisites:
-* Qt 5.
-* A compiler with C++11 support.
+* Qt 6.
+* A C++20 compiler.
+* [cpp-template-utils](https://github.com/VioletGiraffe/cpp-template-utils) checked out next to this repository.
 
-Build the project as you would any Qt-based static library.
+Build `github-releases-autoupdater.pro` as you would any Qt-based static library.

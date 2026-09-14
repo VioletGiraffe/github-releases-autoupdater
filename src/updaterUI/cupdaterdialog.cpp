@@ -4,6 +4,7 @@ DISABLE_COMPILER_WARNINGS
 #include "ui_cupdaterdialog.h"
 
 #include <QDesktopServices>
+#include <QLocale>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QStringBuilder>
@@ -49,6 +50,7 @@ void CUpdaterDialog::applyUpdate()
 		ui->lblOperationInProgress->setText("Downloading the update...");
 		ui->stackedWidget->setCurrentIndex(0);
 
+		_updateDownloadStarted = true;
 		_updater.downloadAndInstallUpdate(_latestUpdateUrl);
 	} else {
 		QDesktopServices::openUrl(QUrl(_latestUpdateUrl));
@@ -110,11 +112,19 @@ void CUpdaterDialog::onUpdateAvailable(const CAutoUpdaterGithub::ChangeLog& chan
 	}
 }
 
-// percentageDownloaded >= 100.0f means the download has finished
-void CUpdaterDialog::onUpdateDownloadProgress(float percentageDownloaded)
+void CUpdaterDialog::onUpdateDownloadProgress(qint64 bytesReceived, qint64 bytesTotal)
 {
-	ui->progressBar->setValue((int)percentageDownloaded);
-	ui->lblPercentage->setText(QString::number(static_cast<double>(percentageDownloaded), 'f', 2) + " %");
+	if (bytesTotal <= 0)
+	{
+		ui->progressBar->setMaximum(0);
+		ui->lblPercentage->setText(locale().formattedDataSize(bytesReceived));
+		return;
+	}
+
+	const double percentage = static_cast<double>(bytesReceived) * 100.0 / static_cast<double>(bytesTotal);
+	ui->progressBar->setMaximum(100);
+	ui->progressBar->setValue(static_cast<int>(percentage));
+	ui->lblPercentage->setText(QString::number(percentage, 'f', 2) + " %");
 }
 
 void CUpdaterDialog::onUpdateDownloadFinished()
@@ -125,6 +135,8 @@ void CUpdaterDialog::onUpdateDownloadFinished()
 void CUpdaterDialog::onUpdateError(const QString& errorMessage)
 {
 	reject();
-	if (!_silent)
-		QMessageBox::critical(this, tr("Error checking for updates"), tr(errorMessage.toUtf8().data()));
+	if (_updateDownloadStarted)
+		QMessageBox::critical(this, tr("Error installing the update"), errorMessage);
+	else if (!_silent)
+		QMessageBox::critical(this, tr("Error checking for updates"), errorMessage);
 }

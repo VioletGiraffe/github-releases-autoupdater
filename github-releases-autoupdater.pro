@@ -71,9 +71,7 @@ SOURCES += \
 	src/cautoupdatergithub.cpp
 
 win*:SOURCES += src/updateinstaller_win.cpp
-mac*:SOURCES += src/updateinstaller_mac.cpp
-linux*:SOURCES += src/updateinstaller_linux.cpp
-freebsd:SOURCES += src/updateinstaller_freebsd.cpp
+else:SOURCES += src/updateinstaller_unsupported.cpp
 
 !updater_without_widgets{
 	SOURCES += \
