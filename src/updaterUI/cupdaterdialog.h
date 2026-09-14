@@ -6,11 +6,11 @@ DISABLE_COMPILER_WARNINGS
 #include <QDialog>
 RESTORE_COMPILER_WARNINGS
 
-namespace Ui {
-	class CUpdaterDialog;
-}
-
-class CAutoUpdaterGithub;
+class QDialogButtonBox;
+class QLabel;
+class QProgressBar;
+class QStackedWidget;
+class QTextEdit;
 
 class CUpdaterDialog final : public QDialog, private CAutoUpdaterGithub::UpdateStatusListener
 {
@@ -19,7 +19,6 @@ public:
 							const QString& githubRepoName, // Name of the repo, e. g. VioletGiraffe/github-releases-autoupdater
 							const QString& versionString,
 							bool silentCheck = false);
-	~CUpdaterDialog() override;
 
 private:
 	void applyUpdate();
@@ -32,7 +31,16 @@ private:
 	void onUpdateError(const QString& errorMessage) override;
 
 private:
-	Ui::CUpdaterDialog *ui;
+	QStackedWidget* _pages;
+	QWidget* _progressPage;
+	QLabel* _lblOperationInProgress;
+	QProgressBar* _progressBar;
+	QLabel* _lblPercentage;
+	QWidget* _changelogPage;
+	QLabel* _lblUpdateAvailable;
+	QTextEdit* _changeLogViewer;
+	QDialogButtonBox* _buttonBox;
+
 	const bool _silent;
 	bool _updateDownloadStarted = false;
 

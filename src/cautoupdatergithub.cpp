@@ -47,13 +47,6 @@ void CAutoUpdaterGithub::checkForUpdates()
 	request.setUrl(QUrl("https://api.github.com/repos/" + _repoName + "/releases"));
 	request.setRawHeader("Accept", "application/vnd.github+json");
 	QNetworkReply * reply = _networkManager.get(request);
-	if (!reply)
-	{
-		if (_listener)
-			_listener->onUpdateError("Network request rejected.");
-		return;
-	}
-
 	connect(reply, &QNetworkReply::finished, this, &CAutoUpdaterGithub::updateCheckRequestFinished, Qt::UniqueConnection);
 }
 
@@ -74,13 +67,6 @@ void CAutoUpdaterGithub::downloadAndInstallUpdate(const QString& updateUrl)
 	request.setMaximumRedirectsAllowed(5);
 	request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 	QNetworkReply * reply = _networkManager.get(request);
-	if (!reply)
-	{
-		if (_listener)
-			_listener->onUpdateError("Network request rejected.");
-		return;
-	}
-
 	connect(reply, &QNetworkReply::readyRead, this, &CAutoUpdaterGithub::onNewDataDownloaded);
 	connect(reply, &QNetworkReply::downloadProgress, this, &CAutoUpdaterGithub::onDownloadProgress);
 	connect(reply, &QNetworkReply::finished, this, &CAutoUpdaterGithub::updateDownloaded, Qt::UniqueConnection);

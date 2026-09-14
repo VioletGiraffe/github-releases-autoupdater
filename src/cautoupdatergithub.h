@@ -24,8 +24,6 @@ RESTORE_COMPILER_WARNINGS
 class CAutoUpdaterGithub final : public QObject
 {
 public:
-	using QObject::QObject;
-
 	struct VersionEntry {
 		QString versionString;
 		QString versionChanges;
@@ -52,8 +50,6 @@ public:
 	CAutoUpdaterGithub(QString githubRepositoryName, // Name of the repo, e. g. VioletGiraffe/github-releases-autoupdater
 					   QString currentVersionString,
 					   const std::function<bool (const QString&, const QString&)>& versionStringComparatorLessThan = {});
-
-	CAutoUpdaterGithub& operator=(const CAutoUpdaterGithub& other) = delete;
 
 	void setUpdateStatusListener(UpdateStatusListener* listener);
 

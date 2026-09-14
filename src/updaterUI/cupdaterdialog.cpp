@@ -1,42 +1,74 @@
 #include "cupdaterdialog.h"
 
 DISABLE_COMPILER_WARNINGS
-#include "ui_cupdaterdialog.h"
-
 #include <QDesktopServices>
+#include <QDialogButtonBox>
+#include <QHBoxLayout>
+#include <QLabel>
 #include <QLocale>
 #include <QMessageBox>
+#include <QProgressBar>
 #include <QPushButton>
+#include <QStackedWidget>
 #include <QStringBuilder>
+#include <QTextEdit>
+#include <QVBoxLayout>
 RESTORE_COMPILER_WARNINGS
 
 CUpdaterDialog::CUpdaterDialog(QWidget *parent, const QString& githubRepoName, const QString& versionString, bool silentCheck) :
 	QDialog(parent),
-	ui(new Ui::CUpdaterDialog),
 	_silent(silentCheck),
 	_updater(githubRepoName, versionString)
 {
-	ui->setupUi(this);
+	setWindowTitle(tr("Update checker"));
+	setModal(true);
 
-	if (_silent)
-		hide();
+	_lblOperationInProgress = new QLabel(tr("Searching for updates..."), this);
+	_progressBar = new QProgressBar(this);
+	_progressBar->setMaximum(0);
+	_progressBar->setValue(0);
+	_progressBar->setTextVisible(false);
+	_lblPercentage = new QLabel(this);
+	_lblPercentage->setVisible(false);
 
-	connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
-	connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &CUpdaterDialog::applyUpdate);
-	ui->buttonBox->button(QDialogButtonBox::Ok)->setText("Install");
+	QHBoxLayout* progressRow = new QHBoxLayout;
+	progressRow->addWidget(_lblOperationInProgress);
+	progressRow->addWidget(_progressBar, 1);
+	progressRow->addWidget(_lblPercentage);
 
-	ui->stackedWidget->setCurrentIndex(0);
-	ui->progressBar->setMaximum(0);
-	ui->progressBar->setValue(0);
-	ui->lblPercentage->setVisible(false);
+	_progressPage = new QWidget(this);
+	QVBoxLayout* progressPageLayout = new QVBoxLayout(_progressPage);
+	progressPageLayout->setContentsMargins(0, 0, 0, 0);
+	progressPageLayout->addLayout(progressRow);
+	progressPageLayout->addStretch();
+
+	_lblUpdateAvailable = new QLabel(this);
+	_changeLogViewer = new QTextEdit(this);
+	_changeLogViewer->setReadOnly(true);
+	_changeLogViewer->setUndoRedoEnabled(false);
+	_buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
+
+	_changelogPage = new QWidget(this);
+	QVBoxLayout* changelogPageLayout = new QVBoxLayout(_changelogPage);
+	changelogPageLayout->setContentsMargins(0, 0, 0, 0);
+	changelogPageLayout->addWidget(_lblUpdateAvailable);
+	changelogPageLayout->addWidget(_changeLogViewer);
+	changelogPageLayout->addWidget(_buttonBox);
+
+	_pages = new QStackedWidget(this);
+	_pages->addWidget(_progressPage);
+	_pages->addWidget(_changelogPage);
+
+	QVBoxLayout* layout = new QVBoxLayout(this);
+	layout->addWidget(_pages);
+
+	resize(560, 330);
+
+	connect(_buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
+	connect(_buttonBox, &QDialogButtonBox::accepted, this, &CUpdaterDialog::applyUpdate);
 
 	_updater.setUpdateStatusListener(this);
 	_updater.checkForUpdates();
-}
-
-CUpdaterDialog::~CUpdaterDialog()
-{
-	delete ui;
 }
 
 void CUpdaterDialog::applyUpdate()
@@ -44,29 +76,20 @@ void CUpdaterDialog::applyUpdate()
 #ifdef _WIN32
 	if (_latestUpdateUrl.endsWith(UPDATE_FILE_EXTENSION))
 	{
-		ui->progressBar->setMaximum(100);
-		ui->progressBar->setValue(0);
-		ui->lblPercentage->setVisible(true);
-		ui->lblOperationInProgress->setText("Downloading the update...");
-		ui->stackedWidget->setCurrentIndex(0);
+		_progressBar->setMaximum(100);
+		_progressBar->setValue(0);
+		_lblPercentage->setVisible(true);
+		_lblOperationInProgress->setText(tr("Downloading the update..."));
+		_pages->setCurrentWidget(_progressPage);
 
 		_updateDownloadStarted = true;
 		_updater.downloadAndInstallUpdate(_latestUpdateUrl);
-	} else {
-		QDesktopServices::openUrl(QUrl(_latestUpdateUrl));
-		accept();
+		return;
 	}
-#else
-	QMessageBox msg(
-		QMessageBox::Question,
-		tr("Manual update required"),
-		tr("Automatic update is not supported on this operating system. Do you want to download and install the update manually?"),
-		QMessageBox::Yes | QMessageBox::No,
-		this);
-
-	if (msg.exec() == QMessageBox::Yes)
-		QDesktopServices::openUrl(QUrl(_latestUpdateUrl));
 #endif
+
+	QDesktopServices::openUrl(QUrl(_latestUpdateUrl));
+	accept();
 }
 
 // If no updates are found, the changelog is empty
@@ -91,7 +114,7 @@ void CUpdaterDialog::onUpdateAvailable(const CAutoUpdaterGithub::ChangeLog& chan
 		};
 
 		QString html;
-		ui->stackedWidget->setCurrentIndex(1);
+		_pages->setCurrentWidget(_changelogPage);
 		for (const auto& changelogItem : changelog)
 		{
 			html.append(
@@ -100,13 +123,16 @@ void CUpdaterDialog::onUpdateAvailable(const CAutoUpdaterGithub::ChangeLog& chan
 		}
 
 
-		ui->changeLogViewer->setHtml(html);
+		_changeLogViewer->setHtml(html);
 		_latestUpdateUrl = changelog.front().versionUpdateUrl;
-		if (changelog.front().isPrerelease)
-		{
-			ui->label->setText(tr("A new pre-release version is available!"));
-			ui->buttonBox->button(QDialogButtonBox::Ok)->setText(tr("Install pre-release"));
-		}
+
+		const bool prerelease = changelog.front().isPrerelease;
+		_lblUpdateAvailable->setText(prerelease ? tr("A new pre-release version is available!") : tr("A new version is available!"));
+#ifdef _WIN32
+		_buttonBox->button(QDialogButtonBox::Ok)->setText(prerelease ? tr("Install pre-release") : tr("Install"));
+#else
+		_buttonBox->button(QDialogButtonBox::Ok)->setText(prerelease ? tr("Download pre-release") : tr("Download"));
+#endif
 		show();
 	}
 	else
@@ -121,15 +147,15 @@ void CUpdaterDialog::onUpdateDownloadProgress(qint64 bytesReceived, qint64 bytes
 {
 	if (bytesTotal <= 0)
 	{
-		ui->progressBar->setMaximum(0);
-		ui->lblPercentage->setText(locale().formattedDataSize(bytesReceived));
+		_progressBar->setMaximum(0);
+		_lblPercentage->setText(locale().formattedDataSize(bytesReceived));
 		return;
 	}
 
 	const double percentage = static_cast<double>(bytesReceived) * 100.0 / static_cast<double>(bytesTotal);
-	ui->progressBar->setMaximum(100);
-	ui->progressBar->setValue(static_cast<int>(percentage));
-	ui->lblPercentage->setText(QString::number(percentage, 'f', 2) + " %");
+	_progressBar->setMaximum(100);
+	_progressBar->setValue(static_cast<int>(percentage));
+	_lblPercentage->setText(QString::number(percentage, 'f', 2) + " %");
 }
 
 void CUpdaterDialog::onUpdateDownloadFinished()

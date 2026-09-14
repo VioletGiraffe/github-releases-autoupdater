@@ -79,7 +79,4 @@ else:SOURCES += src/updateinstaller_unsupported.cpp
 
 	HEADERS += \
 		src/updaterUI/cupdaterdialog.h
-
-	FORMS += \
-		src/updaterUI/cupdaterdialog.ui
 }
