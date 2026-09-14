@@ -113,7 +113,7 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 
 	ChangeLog changelog;
 
-	for (const auto& item: jsonDocument.array())
+	for (const QJsonArray releases = jsonDocument.array(); const auto item : releases)
 	{
 		const auto release = item.toObject();
 		if (release["draft"].toBool())
@@ -141,9 +141,9 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 
 		// Find the appropriate release URL for our platform
 		QString url; // [0]["browser_download_url"].toString()
-		for (const auto& releaseAsset : release["assets"].toArray())
+		for (const QJsonArray assets = release["assets"].toArray(); const auto releaseAsset : assets)
 		{
-			const QString assetUrl = releaseAsset.toObject()["browser_download_url"].toString();
+			const QString assetUrl = releaseAsset.toObject().value("browser_download_url").toString();
 			if (assetUrl.endsWith(targetExtension))
 			{
 				url = assetUrl;

@@ -11,7 +11,7 @@ RESTORE_COMPILER_WARNINGS
 
 #include <cstdlib>
 
-#define report_error(message) {qInfo() << message; return false;}
+#define report_error(message) do { qInfo() << message; return false; } while (false)
 
 bool UpdateInstaller::install(const QString& downloadedUpdateFilePath)
 {

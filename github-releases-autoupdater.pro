@@ -11,6 +11,16 @@ exists(../global.pri){
 } else {
 	CONFIG += c++2b
 	win*:QMAKE_CXXFLAGS_WARN_ON = /W4
+
+	mac*{
+		# Qt frameworks as system headers: moc output includes them outside DISABLE_COMPILER_WARNINGS
+		QMAKE_CXXFLAGS += -iframework $$[QT_INSTALL_LIBS]
+
+		# Qt 6.9 headers use ARM ACLE intrinsics without including arm_acle.h
+		contains(QMAKE_HOST.arch, arm64)|contains(QMAKE_APPLE_DEVICE_ARCHS, arm64) {
+			QMAKE_CXXFLAGS += -include arm_acle.h
+		}
+	}
 }
 
 mac* | linux* | freebsd{

@@ -114,7 +114,7 @@ void CUpdaterDialog::onUpdateAvailable(const CAutoUpdaterGithub::ChangeLog& chan
 void CUpdaterDialog::onUpdateDownloadProgress(float percentageDownloaded)
 {
 	ui->progressBar->setValue((int)percentageDownloaded);
-	ui->lblPercentage->setText(QString::number(percentageDownloaded, 'f', 2) + " %");
+	ui->lblPercentage->setText(QString::number(static_cast<double>(percentageDownloaded), 'f', 2) + " %");
 }
 
 void CUpdaterDialog::onUpdateDownloadFinished()
