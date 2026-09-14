@@ -10,6 +10,7 @@ exists(../global.pri){
 	include(../global.pri)
 } else {
 	CONFIG += c++2b
+	win*:QMAKE_CXXFLAGS_WARN_ON = /W4
 }
 
 mac* | linux* | freebsd{
@@ -33,9 +34,9 @@ INCLUDEPATH += \
 	$${PWD}/3rdparty
 
 win*{
-	QMAKE_CXXFLAGS += /MP /Zi /wd4251
+	QMAKE_CXXFLAGS += /MP /Zi
 	QMAKE_CXXFLAGS += /std:c++latest /permissive- /Zc:__cplusplus
-	QMAKE_CXXFLAGS_WARN_ON = /W4
+	QMAKE_CXXFLAGS_WARN_ON += /wd4251
 	DEFINES += WIN32_LEAN_AND_MEAN NOMINMAX
 
 	Debug:QMAKE_LFLAGS += /INCREMENTAL
@@ -44,8 +45,8 @@ win*{
 
 mac* | linux* | freebsd{
 	CONFIG += strict_c c99
-	QMAKE_CFLAGS   += -pedantic-errors
-	QMAKE_CXXFLAGS += -pedantic-errors
+	QMAKE_CFLAGS_WARN_ON   += -pedantic-errors
+	QMAKE_CXXFLAGS_WARN_ON += -pedantic-errors
 	QMAKE_CXXFLAGS_WARN_ON *= -Wall
 
 	Release:DEFINES += NDEBUG=1
