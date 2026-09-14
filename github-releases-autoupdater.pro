@@ -43,7 +43,8 @@ win*{
 }
 
 mac* | linux* | freebsd{
-	QMAKE_CFLAGS   += -pedantic-errors -std=c99
+	CONFIG += strict_c c99
+	QMAKE_CFLAGS   += -pedantic-errors
 	QMAKE_CXXFLAGS += -pedantic-errors
 	QMAKE_CXXFLAGS_WARN_ON *= -Wall
 
