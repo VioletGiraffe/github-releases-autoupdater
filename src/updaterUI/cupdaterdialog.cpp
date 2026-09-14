@@ -85,7 +85,7 @@ void CUpdaterDialog::onUpdateAvailable(const CAutoUpdaterGithub::ChangeLog& chan
 				html += " (tag: " % release.versionString.toHtmlEscaped() % ")";
 
 			if (release.isPrerelease)
-				html += " [Pre-release]";
+				html += " <b>[Pre-release]</b>";
 
 			return html;
 		};
@@ -102,6 +102,11 @@ void CUpdaterDialog::onUpdateAvailable(const CAutoUpdaterGithub::ChangeLog& chan
 
 		ui->changeLogViewer->setHtml(html);
 		_latestUpdateUrl = changelog.front().versionUpdateUrl;
+		if (changelog.front().isPrerelease)
+		{
+			ui->label->setText(tr("A new pre-release version is available!"));
+			ui->buttonBox->button(QDialogButtonBox::Ok)->setText(tr("Install pre-release"));
+		}
 		show();
 	}
 	else
