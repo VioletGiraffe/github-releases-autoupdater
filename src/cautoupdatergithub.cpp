@@ -12,6 +12,8 @@ DISABLE_COMPILER_WARNINGS
 #include <QLocale>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QRegularExpression>
+#include <QSysInfo>
 RESTORE_COMPILER_WARNINGS
 
 #include <assert.h>
@@ -30,6 +32,54 @@ static const auto naturalSortQstringComparator = [](const QString& l, const QStr
 	// Fix for the new breaking changes in QCollator in Qt 5.14 - null strings are no longer a valid input
 	return collator.compare(qToStringViewIgnoringNull(l), qToStringViewIgnoringNull(r)) < 0;
 };
+
+// Architecture names an asset may carry, each mapped to the QSysInfo::currentCpuArchitecture() value it stands for
+static constexpr std::pair<QLatin1StringView, QLatin1StringView> assetArchitectureNames[]{
+	{ QLatin1StringView{ "x86_64" }, QLatin1StringView{ "x86_64" } },
+	{ QLatin1StringView{ "amd64" }, QLatin1StringView{ "x86_64" } },
+	{ QLatin1StringView{ "x64" }, QLatin1StringView{ "x86_64" } },
+	{ QLatin1StringView{ "aarch64" }, QLatin1StringView{ "arm64" } },
+	{ QLatin1StringView{ "arm64" }, QLatin1StringView{ "arm64" } },
+};
+
+// The architecture is a '-' or '.' separated part of the asset name, e.g. App-aarch64.AppImage; empty if the name has none
+static QLatin1StringView assetArchitecture(const QString& assetName)
+{
+	static const QRegularExpression separators{ QStringLiteral("[-.]") };
+	for (const QString& part : assetName.split(separators, Qt::SkipEmptyParts))
+	{
+		for (const auto& [name, architecture] : assetArchitectureNames)
+		{
+			if (part.compare(name, Qt::CaseInsensitive) == 0)
+				return architecture;
+		}
+	}
+
+	return {};
+}
+
+// The platform's asset built for the running CPU, else the first one naming no architecture; empty if there is neither
+static QString updateAssetUrl(const QJsonArray& assets)
+{
+	const QString currentArchitecture = QSysInfo::currentCpuArchitecture();
+	QString unmarkedAssetUrl;
+	for (const auto item : assets)
+	{
+		const QJsonObject asset = item.toObject();
+		const QString name = asset.value("name").toString();
+		if (!name.endsWith(UPDATE_FILE_EXTENSION))
+			continue;
+
+		const QLatin1StringView architecture = assetArchitecture(name);
+		if (architecture == currentArchitecture)
+			return asset.value("browser_download_url").toString();
+
+		if (architecture.isEmpty() && unmarkedAssetUrl.isEmpty())
+			unmarkedAssetUrl = asset.value("browser_download_url").toString();
+	}
+
+	return unmarkedAssetUrl;
+}
 
 CAutoUpdaterGithub::CAutoUpdaterGithub(QString githubRepositoryName, QString currentVersionString, const std::function<bool (const QString&, const QString&)>& versionStringComparatorLessThan) :
 	_repoName(std::move(githubRepositoryName)),
@@ -126,18 +176,7 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 		if (!_lessThanVersionStringComparator(_currentVersionString, updateVersion))
 			continue; // version <= _currentVersionString, skipping
 
-		// Find the appropriate release URL for our platform
-		QString url;
-		for (const QJsonArray assets = release["assets"].toArray(); const auto releaseAsset : assets)
-		{
-			const QString assetUrl = releaseAsset.toObject().value("browser_download_url").toString();
-			if (assetUrl.endsWith(UPDATE_FILE_EXTENSION))
-			{
-				url = assetUrl;
-				break;
-			}
-		}
-
+		QString url = updateAssetUrl(release["assets"].toArray());
 		if (url.isEmpty())
 			url = release["html_url"].toString(); // Fallback in case there is no download link available
 

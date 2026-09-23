@@ -16,7 +16,7 @@ Automatic installation is only implemented on Windows, where the downloaded `.ex
 
 * Draft releases are skipped. Pre-releases are included, marked by `isPrerelease`; the dialog labels them as such.
 * A leading `v` or `.v` is removed from the tag name before comparing versions.
-* `versionUpdateUrl` is the first release asset ending in the platform's extension (`.exe`, `.dmg`, `.AppImage`), or the release page if there is none.
+* `versionUpdateUrl` is a release asset ending in the platform's extension (`.exe`, `.dmg`, `.AppImage`), or the release page if there is none. An asset name may state its CPU architecture as a `-` or `.` separated part, e.g. `App-aarch64.AppImage` (`x86_64`, `amd64`, `x64`, `aarch64`, `arm64`). The asset for the running CPU is preferred, then the first one stating no architecture.
 * `versionChangesMarkdown` is the release description as written on GitHub, in Markdown. The dialog renders it with Qt's Markdown support.
 
 ## Ready-made dialog
