@@ -11,9 +11,31 @@ DISABLE_COMPILER_WARNINGS
 #include <QPushButton>
 #include <QStackedWidget>
 #include <QStringBuilder>
+#include <QTextBlock>
+#include <QTextCursor>
+#include <QTextDocument>
+#include <QTextDocumentFragment>
 #include <QTextEdit>
+#include <QTextFormat>
 #include <QVBoxLayout>
 RESTORE_COMPILER_WARNINGS
+
+// CommonMark allows a backslash before any ASCII punctuation character
+[[nodiscard]] static QString escapedForMarkdown(const QString& text)
+{
+	static constexpr QStringView asciiPunctuation = u"!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+
+	QString escaped;
+	escaped.reserve(text.size() * 2);
+	for (const QChar c : text)
+	{
+		if (asciiPunctuation.contains(c))
+			escaped += '\\';
+		escaped += c;
+	}
+
+	return escaped;
+}
 
 CUpdaterDialog::CUpdaterDialog(QWidget *parent, const QString& githubRepoName, const QString& versionString, bool silentCheck) :
 	QDialog(parent),
@@ -97,33 +119,38 @@ void CUpdaterDialog::onUpdateAvailable(const CAutoUpdaterGithub::ChangeLog& chan
 {
 	if (!changelog.empty())
 	{
-		static constexpr auto annotateEmptyDescription = [](const QString& desc) -> QString {
-			return !desc.isEmpty() ? desc : "<br><i>Release doesn't provide a description</i><br>";
-		};
-
-		static constexpr auto versionTitleHtml = [](const CAutoUpdaterGithub::VersionEntry& release) -> QString {
+		static constexpr auto versionTitleMarkdown = [](const CAutoUpdaterGithub::VersionEntry& release) -> QString {
 			const QString title = !release.releaseTitle.isEmpty() ? release.releaseTitle : release.versionString;
-			QString html = "<b>" % title.toHtmlEscaped() % "</b>";
+			QString markdown = "**" % escapedForMarkdown(title) % "**";
 			if (!release.releaseTitle.isEmpty() && release.releaseTitle != release.versionString)
-				html += " (tag: " % release.versionString.toHtmlEscaped() % ")";
+				markdown += " (tag: " % escapedForMarkdown(release.versionString) % ")";
 
 			if (release.isPrerelease)
-				html += " <b>[Pre-release]</b>";
+				markdown += R"( **\[Pre-release\]**)";
 
-			return html;
+			return markdown;
 		};
 
-		QString html;
 		_pages->setCurrentWidget(_changelogPage);
-		for (const auto& changelogItem : changelog)
+		QTextCursor cursor{ _changeLogViewer->document() };
+		for (const auto& release : changelog)
 		{
-			html.append(
-				versionTitleHtml(changelogItem) % " (" % changelogItem.date % ")" % annotateEmptyDescription(changelogItem.versionChanges) % "<br>"
-			);
+			const QString notesMarkdown = !release.versionChangesMarkdown.isEmpty() ? release.versionChangesMarkdown : QStringLiteral("*Release doesn't provide a description*");
+
+			// Each release is its own document: an unclosed code fence in the notes cannot spill into the next release
+			QTextDocument releaseDocument;
+			releaseDocument.setMarkdown(versionTitleMarkdown(release) % " (" % escapedForMarkdown(release.date) % ")\n\n" % notesMarkdown);
+
+			// Explicit formats: a new block otherwise inherits the previous one's, e. g. its list membership
+			// Insertion away from the document start drops a fragment's first block format: the title's is reapplied here
+			if (!cursor.atStart())
+			{
+				cursor.insertBlock(QTextBlockFormat{}, QTextCharFormat{}); // Empty line between releases
+				cursor.insertBlock(releaseDocument.firstBlock().blockFormat(), QTextCharFormat{});
+			}
+			cursor.insertFragment(QTextDocumentFragment{ &releaseDocument });
 		}
 
-
-		_changeLogViewer->setHtml(html);
 		_latestUpdateUrl = changelog.front().versionUpdateUrl;
 
 		const bool prerelease = changelog.front().isPrerelease;

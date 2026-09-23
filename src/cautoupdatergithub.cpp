@@ -12,8 +12,6 @@ DISABLE_COMPILER_WARNINGS
 #include <QLocale>
 #include <QNetworkReply>
 #include <QNetworkRequest>
-
-#include "maddy/parser.h"
 RESTORE_COMPILER_WARNINGS
 
 #include <assert.h>
@@ -143,16 +141,11 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 		if (url.isEmpty())
 			url = release["html_url"].toString(); // Fallback in case there is no download link available
 
-		const QString updateChanges = release["body"].toString().remove('\r');
-		maddy::Parser markdownParser;
-		std::istringstream istream{ updateChanges.toStdString() };
-		std::string htmlChanges = markdownParser.Parse(istream);
-
 		QString dateString = release["created_at"].toString();
 		dateString = QDateTime::fromString(dateString, Qt::DateFormat::ISODate).toString("dd MMM yyyy");
 
 		const bool prerelease = release["prerelease"].toBool();
-		changelog.push_back({ updateVersion, QString::fromStdString(htmlChanges), dateString, url, prerelease, release["name"].toString() });
+		changelog.push_back({ updateVersion, release["body"].toString(), dateString, url, prerelease, release["name"].toString() });
 	}
 
 	if (_listener)

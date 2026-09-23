@@ -26,7 +26,7 @@ class CAutoUpdaterGithub final : public QObject
 public:
 	struct VersionEntry {
 		QString versionString;
-		QString versionChanges;
+		QString versionChangesMarkdown;
 		QString date;
 		QString versionUpdateUrl;
 		bool isPrerelease = false;

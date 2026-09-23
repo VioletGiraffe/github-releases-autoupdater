@@ -40,9 +40,6 @@ RCC_DIR     = ../build/$${OUTPUT_DIR}/$${TARGET}
 # Required for qDebug() to log function name, file and line in release build
 DEFINES += QT_MESSAGELOGCONTEXT
 
-INCLUDEPATH += \
-	$${PWD}/3rdparty
-
 win*{
 	QMAKE_CXXFLAGS += /MP /Zi
 	QMAKE_CXXFLAGS += /std:c++latest /permissive- /Zc:__cplusplus
