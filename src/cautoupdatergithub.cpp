@@ -9,6 +9,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
+#include <QLocale>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 
@@ -19,9 +20,14 @@ RESTORE_COMPILER_WARNINGS
 #include <utility>
 
 static const auto naturalSortQstringComparator = [](const QString& l, const QString& r) {
-	static QCollator collator;
-	collator.setNumericMode(true);
-	collator.setCaseSensitivity(Qt::CaseInsensitive);
+	static const QCollator collator = [] {
+		// QCollator does not collate in the C locale, numeric mode included: English stands in for it
+		const QLocale collationLocale = QLocale().collation();
+		QCollator c{ collationLocale.language() == QLocale::C ? QLocale{ QLocale::English } : collationLocale };
+		c.setNumericMode(true);
+		c.setCaseSensitivity(Qt::CaseInsensitive);
+		return c;
+	}();
 
 	// Fix for the new breaking changes in QCollator in Qt 5.14 - null strings are no longer a valid input
 	return collator.compare(qToStringViewIgnoringNull(l), qToStringViewIgnoringNull(r)) < 0;
