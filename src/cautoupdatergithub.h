@@ -48,6 +48,7 @@ public:
 public:
 	// If the string comparison functior is not supplied, case-insensitive natural sorting is used (using QCollator)
 	CAutoUpdaterGithub(QString githubRepositoryName, // Name of the repo, e. g. VioletGiraffe/github-releases-autoupdater
+					   QString assetName, // The release asset's name without the architecture and the extension, e. g. App for App-aarch64.AppImage
 					   QString currentVersionString,
 					   const std::function<bool (const QString&, const QString&)>& versionStringComparatorLessThan = {});
 
@@ -65,6 +66,7 @@ private:
 private:
 	QFile _downloadedBinaryFile;
 	const QString _repoName;
+	const QString _assetName;
 	const QString _currentVersionString;
 	const std::function<bool (const QString&, const QString&)> _lessThanVersionStringComparator;
 

@@ -17,6 +17,7 @@ class CUpdaterDialog final : public QDialog, private CAutoUpdaterGithub::UpdateS
 public:
 	explicit CUpdaterDialog(QWidget *parent,
 							const QString& githubRepoName, // Name of the repo, e. g. VioletGiraffe/github-releases-autoupdater
+							const QString& assetName, // See CAutoUpdaterGithub
 							const QString& versionString,
 							bool silentCheck = false);
 

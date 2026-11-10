@@ -37,10 +37,10 @@ RESTORE_COMPILER_WARNINGS
 	return escaped;
 }
 
-CUpdaterDialog::CUpdaterDialog(QWidget *parent, const QString& githubRepoName, const QString& versionString, bool silentCheck) :
+CUpdaterDialog::CUpdaterDialog(QWidget *parent, const QString& githubRepoName, const QString& assetName, const QString& versionString, bool silentCheck) :
 	QDialog(parent),
 	_silent(silentCheck),
-	_updater(githubRepoName, versionString)
+	_updater(githubRepoName, assetName, versionString)
 {
 	setWindowTitle(tr("Update checker"));
 	setModal(true);

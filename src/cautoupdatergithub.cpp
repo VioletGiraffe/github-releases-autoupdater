@@ -12,11 +12,11 @@ DISABLE_COMPILER_WARNINGS
 #include <QLocale>
 #include <QNetworkReply>
 #include <QNetworkRequest>
-#include <QRegularExpression>
 #include <QSysInfo>
 RESTORE_COMPILER_WARNINGS
 
 #include <assert.h>
+#include <optional>
 #include <utility>
 
 static const auto naturalSortQstringComparator = [](const QString& l, const QString& r) {
@@ -42,51 +42,59 @@ static constexpr std::pair<QLatin1StringView, QLatin1StringView> assetArchitectu
 	{ QLatin1StringView{ "arm64" }, QLatin1StringView{ "arm64" } },
 };
 
-// The architecture is a '-' or '.' separated part of the asset name, e.g. App-aarch64.AppImage; empty if the name has none
-static QLatin1StringView assetArchitecture(const QString& assetName)
+// The app's asset is named appAssetName, optionally followed by a '-' or '.' separated architecture, then the platform's extension.
+// Returns the asset's architecture, empty when the name states none; nullopt for any other asset.
+static std::optional<QLatin1StringView> assetArchitecture(QStringView assetName, QStringView appAssetName)
 {
-	static const QRegularExpression separators{ QStringLiteral("[-.]") };
-	for (const QString& part : assetName.split(separators, Qt::SkipEmptyParts))
+	if (assetName.size() < appAssetName.size() + UPDATE_FILE_EXTENSION.size() || !assetName.endsWith(UPDATE_FILE_EXTENSION)
+		|| !assetName.startsWith(appAssetName, Qt::CaseInsensitive))
+		return std::nullopt;
+
+	const QStringView suffix = assetName.sliced(appAssetName.size()).chopped(UPDATE_FILE_EXTENSION.size());
+	if (suffix.isEmpty())
+		return QLatin1StringView{};
+	if (suffix.front() != u'-' && suffix.front() != u'.')
+		return std::nullopt;
+
+	for (const auto& [name, architecture] : assetArchitectureNames)
 	{
-		for (const auto& [name, architecture] : assetArchitectureNames)
-		{
-			if (part.compare(name, Qt::CaseInsensitive) == 0)
-				return architecture;
-		}
+		if (suffix.sliced(1).compare(name, Qt::CaseInsensitive) == 0)
+			return architecture;
 	}
 
-	return {};
+	return std::nullopt;
 }
 
-// The platform's asset built for the running CPU, else the first one naming no architecture; empty if there is neither
-static QString updateAssetUrl(const QJsonArray& assets)
+// The app's asset built for the running CPU, else its first asset naming no architecture; empty if there is neither
+static QString updateAssetUrl(const QJsonArray& assets, QStringView appAssetName)
 {
 	const QString currentArchitecture = QSysInfo::currentCpuArchitecture();
 	QString unmarkedAssetUrl;
 	for (const auto item : assets)
 	{
 		const QJsonObject asset = item.toObject();
-		const QString name = asset.value("name").toString();
-		if (!name.endsWith(UPDATE_FILE_EXTENSION))
+		const std::optional<QLatin1StringView> architecture = assetArchitecture(asset.value("name").toString(), appAssetName);
+		if (!architecture)
 			continue;
 
-		const QLatin1StringView architecture = assetArchitecture(name);
-		if (architecture == currentArchitecture)
+		if (*architecture == currentArchitecture)
 			return asset.value("browser_download_url").toString();
 
-		if (architecture.isEmpty() && unmarkedAssetUrl.isEmpty())
+		if (architecture->isEmpty() && unmarkedAssetUrl.isEmpty())
 			unmarkedAssetUrl = asset.value("browser_download_url").toString();
 	}
 
 	return unmarkedAssetUrl;
 }
 
-CAutoUpdaterGithub::CAutoUpdaterGithub(QString githubRepositoryName, QString currentVersionString, const std::function<bool (const QString&, const QString&)>& versionStringComparatorLessThan) :
+CAutoUpdaterGithub::CAutoUpdaterGithub(QString githubRepositoryName, QString assetName, QString currentVersionString, const std::function<bool (const QString&, const QString&)>& versionStringComparatorLessThan) :
 	_repoName(std::move(githubRepositoryName)),
+	_assetName(std::move(assetName)),
 	_currentVersionString(std::move(currentVersionString)),
 	_lessThanVersionStringComparator(versionStringComparatorLessThan ? versionStringComparatorLessThan : naturalSortQstringComparator)
 {
 	assert(_repoName.count(QChar('/')) == 1);
+	assert(!_assetName.isEmpty());
 	assert(!_currentVersionString.isEmpty());
 }
 
@@ -176,7 +184,7 @@ void CAutoUpdaterGithub::updateCheckRequestFinished()
 		if (!_lessThanVersionStringComparator(_currentVersionString, updateVersion))
 			continue; // version <= _currentVersionString, skipping
 
-		QString url = updateAssetUrl(release["assets"].toArray());
+		QString url = updateAssetUrl(release["assets"].toArray(), _assetName);
 		if (url.isEmpty())
 			url = release["html_url"].toString(); // Fallback in case there is no download link available
 
